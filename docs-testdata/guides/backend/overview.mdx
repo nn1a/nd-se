@@ -1,0 +1,645 @@
+# Backend Development Guide
+
+Welcome to our FastAPI backend development guide! Learn how to build robust, scalable APIs.
+
+<Alert type="info" title="What You'll Learn">
+This guide covers FastAPI, MongoDB integration, authentication, testing, and deployment best practices.
+</Alert>
+
+## Architecture Overview
+
+Our backend follows a clean, modular architecture:
+
+<Card title="Backend Architecture">
+
+```
+backend/
+├── app/
+│   ├── core/              # Core functionality
+│   │   ├── config.py      # Configuration
+│   │   ├── security.py    # Authentication & security
+│   │   └── database.py    # Database connection
+│   ├── models/            # Pydantic models
+│   ├── routers/           # API route handlers
+│   ├── services/          # Business logic
+│   ├── utils/             # Helper functions
+│   └── main.py           # FastAPI app instance
+├── tests/                 # Test files
+├── requirements.txt       # Dependencies
+└── .env                  # Environment variables
+```
+
+</Card>
+
+## Key Technologies
+
+<Tabs defaultTab={0}>
+  <Tab label="FastAPI">
+    ```python
+    from fastapi import FastAPI, Depends
+    from fastapi.middleware.cors import CORSMiddleware
+    
+    app = FastAPI(
+        title="ND-SE API",
+        description="Documentation system API",
+        version="1.0.0"
+    )
+    
+    # CORS middleware
+    app.add_middleware(
+        CORSMiddleware,
+        allow_origins=["http://localhost:3000"],
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+    )
+    
+    @app.get("/health")
+    async def health_check():
+        return {"status": "healthy"}
+    ```
+  </Tab>
+  <Tab label="MongoDB">
+    ```python
+    from motor.motor_asyncio import AsyncIOMotorClient
+    from typing import Optional
+    
+    class DatabaseManager:
+        client: Optional[AsyncIOMotorClient] = None
+        database = None
+    
+    db = DatabaseManager()
+    
+    async def connect_to_mongo():
+        db.client = AsyncIOMotorClient(MONGODB_URL)
+        db.database = db.client[DATABASE_NAME]
+    
+    async def close_mongo_connection():
+        if db.client:
+            db.client.close()
+    
+    # Usage
+    collection = db.database.docs
+    document = await collection.find_one({"slug": slug})
+    ```
+  </Tab>
+  <Tab label="Authentication">
+    ```python
+    from fastapi import Depends, HTTPException, status
+    from fastapi.security import HTTPBearer
+    from jose import JWTError, jwt
+    
+    security = HTTPBearer()
+    
+    def create_access_token(data: dict):
+        to_encode = data.copy()
+        expire = datetime.utcnow() + timedelta(hours=24)
+        to_encode.update({"exp": expire})
+        return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+    async def get_current_user(token: str = Depends(security)):
+        try:
+            payload = jwt.decode(token.credentials, SECRET_KEY, algorithms=[ALGORITHM])
+            user_id: str = payload.get("sub")
+            if user_id is None:
+                raise HTTPException(status_code=401, detail="Invalid token")
+            return user_id
+        except JWTError:
+            raise HTTPException(status_code=401, detail="Invalid token")
+    ```
+  </Tab>
+</Tabs>
+
+## API Design Patterns
+
+### RESTful Endpoints
+
+<CodeBlock title="Document API Router" language="python">
+{`from fastapi import APIRouter, HTTPException, Depends
+from typing import List, Optional
+from ..models.document import Document, DocumentCreate, DocumentUpdate
+from ..services.document_service import DocumentService
+
+router = APIRouter(prefix="/api/docs", tags=["documents"])
+
+@router.get("/", response_model=List[Document])
+async def get_documents(
+    skip: int = 0,
+    limit: int = 100,
+    service: DocumentService = Depends()
+):
+    """Get all documents with pagination"""
+    return await service.get_documents(skip=skip, limit=limit)
+
+@router.get("/{slug}", response_model=Document)
+async def get_document(
+    slug: str,
+    service: DocumentService = Depends()
+):
+    """Get a specific document by slug"""
+    document = await service.get_document_by_slug(slug)
+    if not document:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return document
+
+@router.post("/", response_model=Document)
+async def create_document(
+    document: DocumentCreate,
+    current_user: str = Depends(get_current_user),
+    service: DocumentService = Depends()
+):
+    """Create a new document"""
+    return await service.create_document(document, created_by=current_user)
+
+@router.put("/{slug}", response_model=Document)
+async def update_document(
+    slug: str,
+    document: DocumentUpdate,
+    current_user: str = Depends(get_current_user),
+    service: DocumentService = Depends()
+):
+    """Update an existing document"""
+    updated = await service.update_document(slug, document, updated_by=current_user)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return updated
+
+@router.delete("/{slug}")
+async def delete_document(
+    slug: str,
+    current_user: str = Depends(get_current_user),
+    service: DocumentService = Depends()
+):
+    """Delete a document"""
+    deleted = await service.delete_document(slug, deleted_by=current_user)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Document not found")
+    return {"message": "Document deleted successfully"}`}
+</CodeBlock>
+
+### Data Models
+
+<Alert type="tip" title="Pydantic Models">
+We use Pydantic for data validation, serialization, and automatic API documentation generation.
+</Alert>
+
+<CodeBlock title="Document Models" language="python">
+{`from pydantic import BaseModel, Field
+from typing import Optional, List
+from datetime import datetime
+from bson import ObjectId
+
+class PyObjectId(ObjectId):
+    @classmethod
+    def __get_validators__(cls):
+        yield cls.validate
+
+    @classmethod
+    def validate(cls, v):
+        if not ObjectId.is_valid(v):
+            raise ValueError("Invalid objectid")
+        return ObjectId(v)
+
+    @classmethod
+    def __modify_schema__(cls, field_schema):
+        field_schema.update(type="string")
+
+class DocumentBase(BaseModel):
+    title: str = Field(..., min_length=1, max_length=200)
+    content: str = Field(..., min_length=1)
+    slug: str = Field(..., regex="^[a-z0-9-]+$")
+    order: Optional[int] = Field(default=0)
+    tags: List[str] = Field(default_factory=list)
+
+class DocumentCreate(DocumentBase):
+    pass
+
+class DocumentUpdate(BaseModel):
+    title: Optional[str] = Field(None, min_length=1, max_length=200)
+    content: Optional[str] = Field(None, min_length=1)
+    tags: Optional[List[str]] = None
+    order: Optional[int] = None
+
+class Document(DocumentBase):
+    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+    created_at: datetime
+    updated_at: datetime
+    created_by: str
+    updated_by: str
+
+    class Config:
+        allow_population_by_field_name = True
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}`}
+</CodeBlock>
+
+## Service Layer
+
+<Card title="Service Pattern Benefits">
+
+The service layer separates business logic from API routes:
+
+- **Testability**: Easy to unit test business logic
+- **Reusability**: Services can be used across different routes
+- **Maintainability**: Clear separation of concerns
+- **Dependency Injection**: Easy to mock for testing
+
+</Card>
+
+<CodeBlock title="Document Service" language="python">
+{`class DocumentService:
+    def __init__(self, db: AsyncIOMotorDatabase = Depends(get_database)):
+        self.db = db
+        self.collection = db.docs
+
+    async def get_documents(
+        self, 
+        skip: int = 0, 
+        limit: int = 100,
+        search: Optional[str] = None
+    ) -> List[Document]:
+        """Get documents with optional search"""
+        query = {}
+        if search:
+            query["$text"] = {"$search": search}
+        
+        cursor = self.collection.find(query).skip(skip).limit(limit)
+        documents = []
+        async for doc in cursor:
+            documents.append(Document(**doc))
+        return documents
+
+    async def get_document_by_slug(self, slug: str) -> Optional[Document]:
+        """Get a single document by slug"""
+        doc = await self.collection.find_one({"slug": slug})
+        return Document(**doc) if doc else None
+
+    async def create_document(
+        self, 
+        document: DocumentCreate, 
+        created_by: str
+    ) -> Document:
+        """Create a new document"""
+        doc_dict = document.dict()
+        doc_dict.update({
+            "created_at": datetime.utcnow(),
+            "updated_at": datetime.utcnow(),
+            "created_by": created_by,
+            "updated_by": created_by,
+        })
+        
+        result = await self.collection.insert_one(doc_dict)
+        doc_dict["_id"] = result.inserted_id
+        return Document(**doc_dict)
+
+    async def update_document(
+        self, 
+        slug: str, 
+        update_data: DocumentUpdate, 
+        updated_by: str
+    ) -> Optional[Document]:
+        """Update an existing document"""
+        update_dict = {
+            k: v for k, v in update_data.dict().items() 
+            if v is not None
+        }
+        
+        if not update_dict:
+            return await self.get_document_by_slug(slug)
+        
+        update_dict.update({
+            "updated_at": datetime.utcnow(),
+            "updated_by": updated_by,
+        })
+        
+        result = await self.collection.update_one(
+            {"slug": slug}, 
+            {"$set": update_dict}
+        )
+        
+        if result.modified_count:
+            return await self.get_document_by_slug(slug)
+        return None
+
+    async def delete_document(self, slug: str, deleted_by: str) -> bool:
+        """Delete a document"""
+        result = await self.collection.delete_one({"slug": slug})
+        return result.deleted_count > 0`}
+</CodeBlock>
+
+## Error Handling
+
+<Alert type="warning" title="Proper Error Handling">
+Always provide meaningful error messages and appropriate HTTP status codes.
+</Alert>
+
+<CodeBlock title="Custom Exception Handlers" language="python">
+{`from fastapi import HTTPException, Request
+from fastapi.responses import JSONResponse
+from fastapi.exceptions import RequestValidationError
+from starlette.exceptions import HTTPException as StarletteHTTPException
+
+class CustomHTTPException(HTTPException):
+    def __init__(
+        self,
+        status_code: int,
+        detail: str,
+        error_code: Optional[str] = None,
+        headers: Optional[dict] = None,
+    ):
+        super().__init__(status_code, detail, headers)
+        self.error_code = error_code
+
+@app.exception_handler(CustomHTTPException)
+async def custom_http_exception_handler(request: Request, exc: CustomHTTPException):
+    return JSONResponse(
+        status_code=exc.status_code,
+        content={
+            "error": {
+                "code": exc.error_code or "UNKNOWN_ERROR",
+                "message": exc.detail,
+                "status_code": exc.status_code,
+            }
+        },
+    )
+
+@app.exception_handler(RequestValidationError)
+async def validation_exception_handler(request: Request, exc: RequestValidationError):
+    return JSONResponse(
+        status_code=422,
+        content={
+            "error": {
+                "code": "VALIDATION_ERROR",
+                "message": "Request validation failed",
+                "details": exc.errors(),
+            }
+        },
+    )`}
+</CodeBlock>
+
+## Testing
+
+<Card title="Testing Strategy">
+
+We use pytest for comprehensive testing:
+
+- **Unit Tests**: Test individual functions and classes
+- **Integration Tests**: Test API endpoints
+- **Database Tests**: Test database operations
+- **Authentication Tests**: Test security features
+
+</Card>
+
+<CodeBlock title="API Testing Example" language="python">
+{`import pytest
+from httpx import AsyncClient
+from app.main import app
+
+@pytest.mark.asyncio
+async def test_create_document():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        # Test data
+        document_data = {
+            "title": "Test Document",
+            "content": "# Test Content",
+            "slug": "test-document"
+        }
+        
+        # Create document
+        response = await ac.post(
+            "/api/docs/",
+            json=document_data,
+            headers={"Authorization": "Bearer valid_token"}
+        )
+        
+        assert response.status_code == 200
+        data = response.json()
+        assert data["title"] == document_data["title"]
+        assert data["slug"] == document_data["slug"]
+
+@pytest.mark.asyncio
+async def test_get_document_not_found():
+    async with AsyncClient(app=app, base_url="http://test") as ac:
+        response = await ac.get("/api/docs/nonexistent-slug")
+        
+        assert response.status_code == 404
+        data = response.json()
+        assert "not found" in data["detail"].lower()
+
+@pytest.fixture
+async def test_document():
+    # Create test document in database
+    doc = await create_test_document()
+    yield doc
+    # Cleanup
+    await delete_test_document(doc.id)`}
+</CodeBlock>
+
+## Security Best Practices
+
+<Alert type="danger" title="Security Checklist">
+- ✅ Use HTTPS in production
+- ✅ Validate all input data
+- ✅ Implement rate limiting
+- ✅ Use secure JWT secrets
+- ✅ Hash passwords properly
+- ✅ Sanitize database queries
+- ✅ Enable CORS correctly
+</Alert>
+
+### Authentication & Authorization
+
+<CodeBlock title="Role-Based Access Control" language="python">
+{`from enum import Enum
+from fastapi import Depends, HTTPException
+
+class UserRole(str, Enum):
+    ADMIN = "admin"
+    EDITOR = "editor"
+    VIEWER = "viewer"
+
+def require_role(required_role: UserRole):
+    def role_checker(current_user: dict = Depends(get_current_user)):
+        user_role = UserRole(current_user.get("role", "viewer"))
+        
+        role_hierarchy = {
+            UserRole.VIEWER: 1,
+            UserRole.EDITOR: 2,
+            UserRole.ADMIN: 3
+        }
+        
+        if role_hierarchy[user_role] < role_hierarchy[required_role]:
+            raise HTTPException(
+                status_code=403,
+                detail="Insufficient permissions"
+            )
+        return current_user
+    return role_checker
+
+# Usage
+@router.post("/")
+async def create_document(
+    document: DocumentCreate,
+    current_user: dict = Depends(require_role(UserRole.EDITOR))
+):
+    # Only editors and admins can create documents
+    pass`}
+</CodeBlock>
+
+## Performance Optimization
+
+### Database Indexing
+
+<CodeBlock title="MongoDB Indexes" language="python">
+{`async def create_indexes():
+    """Create database indexes for optimal performance"""
+    
+    # Text search index
+    await db.docs.create_index([
+        ("title", "text"),
+        ("content", "text")
+    ])
+    
+    # Unique slug index
+    await db.docs.create_index("slug", unique=True)
+    
+    # Query optimization indexes
+    await db.docs.create_index([("order", 1), ("created_at", -1)])
+    await db.docs.create_index("created_by")
+    await db.docs.create_index("tags")
+    
+    # User indexes
+    await db.users.create_index("email", unique=True)
+    await db.users.create_index("username", unique=True)`}
+</CodeBlock>
+
+### Caching
+
+<CodeBlock title="Redis Caching" language="python">
+{`import redis.asyncio as redis
+from functools import wraps
+
+redis_client = redis.from_url("redis://localhost:6379")
+
+def cache_result(expiration: int = 300):
+    def decorator(func):
+        @wraps(func)
+        async def wrapper(*args, **kwargs):
+            # Create cache key
+            cache_key = f"{func.__name__}:{hash(str(args) + str(kwargs))}"
+            
+            # Try to get from cache
+            cached = await redis_client.get(cache_key)
+            if cached:
+                return json.loads(cached)
+            
+            # Execute function and cache result
+            result = await func(*args, **kwargs)
+            await redis_client.setex(
+                cache_key, 
+                expiration, 
+                json.dumps(result, default=str)
+            )
+            return result
+        return wrapper
+    return decorator
+
+# Usage
+@cache_result(expiration=600)  # Cache for 10 minutes
+async def get_popular_documents():
+    # Expensive database query
+    pass`}
+</CodeBlock>
+
+## API Documentation
+
+<Alert type="success" title="Auto-Generated Docs">
+FastAPI automatically generates interactive API documentation available at `/docs` and `/redoc`.
+</Alert>
+
+### Enhancing Documentation
+
+<CodeBlock title="Rich API Docs" language="python">
+{`@router.post(
+    "/",
+    response_model=Document,
+    status_code=201,
+    summary="Create a new document",
+    description="Create a new document with the provided data. Requires editor or admin role.",
+    responses={
+        201: {"description": "Document created successfully"},
+        400: {"description": "Invalid input data"},
+        401: {"description": "Authentication required"},
+        403: {"description": "Insufficient permissions"},
+        409: {"description": "Document with this slug already exists"},
+    },
+    tags=["documents"]
+)
+async def create_document(
+    document: DocumentCreate = Body(
+        ...,
+        example={
+            "title": "Getting Started Guide",
+            "content": "# Getting Started\n\nWelcome to our platform!",
+            "slug": "getting-started",
+            "order": 1,
+            "tags": ["guide", "tutorial"]
+        }
+    ),
+    current_user: dict = Depends(require_role(UserRole.EDITOR))
+) -> Document:
+    """
+    Create a new document.
+    
+    This endpoint allows editors and admins to create new documentation.
+    The slug must be unique and follow the pattern: lowercase letters, 
+    numbers, and hyphens only.
+    """
+    pass`}
+</CodeBlock>
+
+## Deployment
+
+<Card title="Production Deployment">
+
+### Environment Setup
+
+```bash
+# Production environment variables
+ENVIRONMENT=production
+MONGODB_URL=mongodb://user:pass@host:port/db
+JWT_SECRET=your-super-secure-secret-key
+CORS_ORIGINS=https://yourdomain.com
+LOG_LEVEL=info
+```
+
+### Docker Deployment
+
+```dockerfile
+FROM python:3.11-slim
+
+WORKDIR /app
+
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+COPY . .
+
+CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+```
+
+</Card>
+
+## Next Steps
+
+Ready to build amazing APIs? Check out these advanced topics:
+
+1. 🔐 [Advanced Authentication](authentication-advanced)
+2. 📊 [Database Optimization](database-optimization)
+3. 🚀 [Performance Tuning](performance-tuning)
+4. 📈 [Monitoring & Logging](monitoring)
+5. 🐳 [Docker & Kubernetes](containerization)
+
+<Alert type="success" title="Happy Coding!">
+You're now equipped with the knowledge to build robust, scalable FastAPI applications! 🎉
+</Alert>

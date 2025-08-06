@@ -1,0 +1,371 @@
+# Frontend Development Guide
+
+Welcome to the frontend development guide! This interactive guide will help you understand and work with our Next.js-based frontend.
+
+<Alert type="info" title="Prerequisites">
+Make sure you have completed the [Installation Guide](../getting-started/installation) and have basic knowledge of React and TypeScript.
+</Alert>
+
+## Architecture Overview
+
+Our frontend is built with modern technologies:
+
+<Card title="Tech Stack">
+
+- **Framework**: Next.js 15 with App Router
+- **Language**: TypeScript for type safety
+- **Styling**: Tailwind CSS for utility-first styling
+- **State Management**: Zustand for global state
+- **Data Fetching**: React Query for server state
+- **UI Components**: Custom components with Radix UI primitives
+
+</Card>
+
+## Project Structure
+
+```
+frontend/
+├── app/                    # Next.js App Router
+│   ├── (auth)/            # Authentication routes
+│   ├── dashboard/         # Dashboard pages
+│   ├── docs/              # Documentation pages
+│   └── layout.tsx         # Root layout
+├── components/            # Reusable components
+│   ├── ui/               # Base UI components
+│   ├── forms/            # Form components
+│   └── layout/           # Layout components
+├── lib/                   # Utility libraries
+│   ├── hooks/            # Custom React hooks
+│   ├── utils/            # Helper functions
+│   └── api.ts            # API client
+├── styles/               # CSS files
+└── types/                # TypeScript definitions
+```
+
+## Key Features
+
+### 1. Component System
+
+<Tabs defaultTab={0}>
+  <Tab label="Base Components">
+    ```tsx
+    // Button component with variants
+    import { Button } from '@/components/ui/button'
+    
+    export function Example() {
+      return (
+        <div>
+          <Button variant="default">Default</Button>
+          <Button variant="destructive">Delete</Button>
+          <Button variant="outline">Outline</Button>
+        </div>
+      )
+    }
+    ```
+  </Tab>
+  <Tab label="Form Components">
+    ```tsx
+    // Form with validation
+    import { useForm } from 'react-hook-form'
+    import { Input } from '@/components/ui/input'
+    import { Label } from '@/components/ui/label'
+    
+    export function UserForm() {
+      const { register, handleSubmit } = useForm()
+      
+      return (
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Label htmlFor="email">Email</Label>
+          <Input 
+            id="email"
+            type="email"
+            {...register('email', { required: true })}
+          />
+          <Button type="submit">Submit</Button>
+        </form>
+      )
+    }
+    ```
+  </Tab>
+  <Tab label="Layout Components">
+    ```tsx
+    // Dashboard layout
+    import { Sidebar } from '@/components/layout/sidebar'
+    import { Header } from '@/components/layout/header'
+    
+    export function DashboardLayout({ children }) {
+      return (
+        <div className="flex h-screen">
+          <Sidebar />
+          <div className="flex-1 flex flex-col">
+            <Header />
+            <main className="flex-1 p-6">
+              {children}
+            </main>
+          </div>
+        </div>
+      )
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### 2. State Management
+
+We use Zustand for simple, effective state management:
+
+<CodeBlock title="Store Example" language="typescript">
+{`import { create } from 'zustand'
+
+interface UserState {
+  user: User | null
+  setUser: (user: User | null) => void
+  isAuthenticated: boolean
+}
+
+export const useUserStore = create<UserState>((set) => ({
+  user: null,
+  setUser: (user) => set({ user, isAuthenticated: !!user }),
+  isAuthenticated: false,
+}))`}
+</CodeBlock>
+
+### 3. Data Fetching
+
+React Query handles all server state:
+
+<CodeBlock title="Custom Hook" language="typescript">
+{`import { useQuery } from '@tanstack/react-query'
+import { apiClient } from '@/lib/api'
+
+export function useDocuments() {
+  return useQuery({
+    queryKey: ['documents'],
+    queryFn: () => apiClient.get('/api/docs'),
+    staleTime: 5 * 60 * 1000, // 5 minutes
+  })
+}
+
+export function useDocument(slug: string) {
+  return useQuery({
+    queryKey: ['document', slug],
+    queryFn: () => apiClient.get(\`/api/docs/\${slug}\`),
+    enabled: !!slug,
+  })
+}`}
+</CodeBlock>
+
+## Styling Guidelines
+
+### Tailwind CSS Best Practices
+
+<Alert type="tip" title="Styling Tips">
+- Use utility classes for rapid development
+- Create custom components for repeated patterns
+- Use CSS variables for theme customization
+- Leverage Tailwind's responsive design utilities
+</Alert>
+
+### Component Styling Pattern
+
+```tsx
+// Good: Composable utility classes
+<div className="flex items-center gap-4 p-6 bg-white rounded-lg shadow-sm">
+  <Avatar src={user.avatar} />
+  <div className="flex-1">
+    <h3 className="font-semibold text-gray-900">{user.name}</h3>
+    <p className="text-sm text-gray-500">{user.email}</p>
+  </div>
+</div>
+```
+
+### Theme Customization
+
+<Card title="CSS Variables">
+
+Our theme system uses CSS variables for easy customization:
+
+```css
+:root {
+  --primary: 220 14% 96%;
+  --primary-foreground: 220.9 39.3% 11%;
+  --background: 0 0% 100%;
+  --foreground: 220.9 39.3% 11%;
+  --muted: 220 14.3% 95.9%;
+  --border: 220 13% 91%;
+}
+```
+
+</Card>
+
+## Performance Optimization
+
+### Code Splitting
+
+<Badge variant="success">Automatic</Badge> Next.js automatically code-splits your application.
+
+```tsx
+// Dynamic imports for heavy components
+import dynamic from 'next/dynamic'
+
+const HeavyChart = dynamic(() => import('./HeavyChart'), {
+  loading: () => <p>Loading chart...</p>,
+  ssr: false
+})
+```
+
+### Image Optimization
+
+```tsx
+import Image from 'next/image'
+
+// Optimized images with Next.js
+<Image
+  src="/hero-image.jpg"
+  alt="Hero image"
+  width={800}
+  height={600}
+  priority // For above-the-fold images
+/>
+```
+
+## Testing
+
+<Alert type="info" title="Testing Strategy">
+We use Jest and React Testing Library for comprehensive testing coverage.
+</Alert>
+
+### Component Testing
+
+```tsx
+import { render, screen } from '@testing-library/react'
+import { Button } from './Button'
+
+describe('Button', () => {
+  test('renders button with text', () => {
+    render(<Button>Click me</Button>)
+    expect(screen.getByRole('button')).toHaveTextContent('Click me')
+  })
+})
+```
+
+## Development Workflow
+
+### 1. Setting Up Development
+
+```bash
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+
+# Run tests
+npm test
+
+# Run linting
+npm run lint
+```
+
+### 2. Creating New Components
+
+<Card title="Component Creation Checklist">
+
+1. ✅ Create the component file
+2. ✅ Add TypeScript interfaces
+3. ✅ Implement the component logic
+4. ✅ Add styling with Tailwind
+5. ✅ Write tests
+6. ✅ Add to Storybook (if applicable)
+7. ✅ Export from index file
+
+</Card>
+
+### 3. Code Quality
+
+<Alert type="warning" title="Code Standards">
+All code must pass ESLint checks and TypeScript compilation before committing.
+</Alert>
+
+```bash
+# Pre-commit hooks will run:
+npm run lint
+npm run type-check
+npm run test
+```
+
+## Common Patterns
+
+### Error Boundaries
+
+```tsx
+'use client'
+
+export function ErrorBoundary({ children }) {
+  return (
+    <ErrorBoundary
+      fallback={<div>Something went wrong!</div>}
+      onError={(error) => console.error('Error caught:', error)}
+    >
+      {children}
+    </ErrorBoundary>
+  )
+}
+```
+
+### Loading States
+
+```tsx
+export function DocumentList() {
+  const { data, isLoading, error } = useDocuments()
+  
+  if (isLoading) return <LoadingSpinner />
+  if (error) return <ErrorMessage error={error} />
+  
+  return (
+    <div>
+      {data?.map(doc => (
+        <DocumentCard key={doc.id} document={doc} />
+      ))}
+    </div>
+  )
+}
+```
+
+## Best Practices
+
+<Card title="Development Best Practices">
+
+### Code Organization
+- Keep components small and focused
+- Use custom hooks for complex logic
+- Separate concerns (UI, logic, data)
+- Follow consistent naming conventions
+
+### Performance
+- Use React.memo for expensive components
+- Implement proper loading states
+- Optimize images and assets
+- Minimize bundle size
+
+### Accessibility
+- Use semantic HTML elements
+- Add proper ARIA labels
+- Ensure keyboard navigation
+- Test with screen readers
+
+</Card>
+
+## Next Steps
+
+Ready to dive deeper? Check out these guides:
+
+1. 🎨 [Advanced Styling](styling-advanced)
+2. 🔄 [State Management Deep Dive](state-management)
+3. 📊 [Data Fetching Patterns](data-fetching)
+4. 🧪 [Testing Strategies](testing)
+5. 🚀 [Deployment](deployment)
+
+<Alert type="success" title="You're Ready!">
+You now have a solid understanding of our frontend architecture. Start building amazing user interfaces! 🎉
+</Alert>

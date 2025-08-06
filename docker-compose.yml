@@ -1,0 +1,73 @@
+version: '3.8'
+
+services:
+  # MongoDB 데이터베이스
+  mongodb:
+    image: mongo:7
+    container_name: nd-se-mongodb
+    restart: unless-stopped
+    ports:
+      - "27017:27017"
+    environment:
+      MONGO_INITDB_DATABASE: nd_se_db
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - nd-se-network
+
+  # FastAPI 백엔드
+  backend:
+    build: 
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: nd-se-backend
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    environment:
+      - MONGODB_URL=mongodb://mongodb:27017
+      - DATABASE_NAME=nd_se_db
+    depends_on:
+      - mongodb
+    volumes:
+      - ./docs:/app/docs
+    networks:
+      - nd-se-network
+
+  # Next.js 프론트엔드
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: nd-se-frontend
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000
+    depends_on:
+      - backend
+    networks:
+      - nd-se-network
+
+  # Nginx 프록시 (선택사항)
+  nginx:
+    image: nginx:alpine
+    container_name: nd-se-nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      - frontend
+      - backend
+    networks:
+      - nd-se-network
+
+volumes:
+  mongodb_data:
+
+networks:
+  nd-se-network:
+    driver: bridge

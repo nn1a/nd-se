@@ -1,0 +1,541 @@
+# Interactive Examples
+
+This page demonstrates interactive MDX components with real examples you can explore.
+
+<Alert type="success" title="Interactive Content">
+This page contains interactive components that showcase the power of MDX in our documentation system!
+</Alert>
+
+## Live Code Examples
+
+### React Component Example
+
+<Tabs defaultTab={0}>
+  <Tab label="Component">
+    ```jsx
+    import React, { useState } from 'react'
+    
+    export function Counter() {
+      const [count, setCount] = useState(0)
+      
+      return (
+        <div className="p-4 border rounded-lg">
+          <h3 className="text-lg font-semibold mb-2">
+            Counter: {count}
+          </h3>
+          <div className="space-x-2">
+            <button 
+              onClick={() => setCount(count - 1)}
+              className="px-3 py-1 bg-red-500 text-white rounded"
+            >
+              Decrease
+            </button>
+            <button 
+              onClick={() => setCount(count + 1)}
+              className="px-3 py-1 bg-green-500 text-white rounded"
+            >
+              Increase
+            </button>
+            <button 
+              onClick={() => setCount(0)}
+              className="px-3 py-1 bg-gray-500 text-white rounded"
+            >
+              Reset
+            </button>
+          </div>
+        </div>
+      )
+    }
+    ```
+  </Tab>
+  <Tab label="Usage">
+    ```jsx
+    import { Counter } from './Counter'
+    
+    function App() {
+      return (
+        <div>
+          <h1>My App</h1>
+          <Counter />
+        </div>
+      )
+    }
+    ```
+  </Tab>
+  <Tab label="Styling">
+    ```css
+    .counter {
+      padding: 1rem;
+      border: 1px solid #e2e8f0;
+      border-radius: 0.5rem;
+      background: white;
+    }
+    
+    .counter h3 {
+      font-size: 1.125rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+    }
+    
+    .counter button {
+      padding: 0.25rem 0.75rem;
+      margin-right: 0.5rem;
+      border: none;
+      border-radius: 0.25rem;
+      cursor: pointer;
+      transition: opacity 0.2s;
+    }
+    
+    .counter button:hover {
+      opacity: 0.8;
+    }
+    ```
+  </Tab>
+</Tabs>
+
+### API Integration Example
+
+<CodeBlock title="Fetch Documents" language="typescript">
+{`import { useState, useEffect } from 'react'
+
+interface Document {
+  id: string
+  title: string
+  slug: string
+  content: string
+}
+
+export function DocumentList() {
+  const [documents, setDocuments] = useState<Document[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    async function fetchDocuments() {
+      try {
+        const response = await fetch('/api/docs')
+        if (!response.ok) {
+          throw new Error(\`HTTP error! status: \${response.status}\`)
+        }
+        const data = await response.json()
+        setDocuments(data)
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred')
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchDocuments()
+  }, [])
+
+  if (loading) return <div>Loading documents...</div>
+  if (error) return <div>Error: {error}</div>
+
+  return (
+    <div>
+      <h2>Documents</h2>
+      <ul>
+        {documents.map(doc => (
+          <li key={doc.id}>
+            <a href={\`/docs/\${doc.slug}\`}>
+              {doc.title}
+            </a>
+          </li>
+        ))}
+      </ul>
+    </div>
+  )
+}`}
+</CodeBlock>
+
+## Component Showcase
+
+### Alert Variations
+
+<Alert type="info" title="Information">
+This is an informational alert. Use it to provide helpful context or additional information.
+</Alert>
+
+<Alert type="success" title="Success">
+Operation completed successfully! Your changes have been saved.
+</Alert>
+
+<Alert type="warning" title="Warning">
+Please review your settings before proceeding. Some configurations may affect performance.
+</Alert>
+
+<Alert type="error" title="Error">
+Something went wrong. Please check your input and try again.
+</Alert>
+
+### Card Layouts
+
+<div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+  <Card title="Frontend Technologies">
+    - **React**: User interface library
+    - **Next.js**: Full-stack framework
+    - **TypeScript**: Type safety
+    - **Tailwind CSS**: Utility-first styling
+    - **React Query**: Server state management
+  </Card>
+
+  <Card title="Backend Technologies">
+    - **FastAPI**: Modern Python web framework
+    - **MongoDB**: Document database
+    - **Pydantic**: Data validation
+    - **JWT**: Authentication tokens
+    - **Motor**: Async MongoDB driver
+  </Card>
+</div>
+
+### Status Indicators
+
+Here are various status badges for different scenarios:
+
+<div className="flex flex-wrap gap-2 mb-4">
+  <Badge variant="success">Active</Badge>
+  <Badge variant="error">Error</Badge>
+  <Badge variant="warning">Warning</Badge>
+  <Badge variant="info">Info</Badge>
+  <Badge variant="default">Default</Badge>
+</div>
+
+**Usage in documentation:**
+
+- API Status: <Badge variant="success">Online</Badge>
+- Feature Status: <Badge variant="warning">Beta</Badge>  
+- Version: <Badge variant="info">v2.1.0</Badge>
+- Build Status: <Badge variant="error">Failed</Badge>
+
+### Advanced Code Examples
+
+<CodeBlock title="FastAPI Dependency Injection" language="python">
+{`from fastapi import Depends, HTTPException
+from sqlalchemy.orm import Session
+from typing import List
+
+# Dependency to get database session
+def get_db() -> Session:
+    db = SessionLocal()
+    try:
+        yield db
+    finally:
+        db.close()
+
+# Dependency to get current user
+async def get_current_user(
+    token: str = Depends(oauth2_scheme),
+    db: Session = Depends(get_db)
+) -> User:
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="Could not validate credentials",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except JWTError:
+        raise credentials_exception
+    
+    user = get_user(db, username=username)
+    if user is None:
+        raise credentials_exception
+    return user
+
+# Endpoint using dependencies
+@app.get("/api/users/me", response_model=UserOut)
+async def read_users_me(
+    current_user: User = Depends(get_current_user)
+):
+    return current_user
+
+@app.get("/api/docs/", response_model=List[DocumentOut])
+async def read_documents(
+    skip: int = 0,
+    limit: int = 100,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user)
+):
+    documents = get_documents(db, skip=skip, limit=limit)
+    return documents`}
+</CodeBlock>
+
+## Interactive Workflows
+
+### Development Workflow
+
+<Card title="Step 1: Setup Development Environment">
+
+1. **Clone the repository**
+   ```bash
+   git clone https://github.com/your-org/nd-se.git
+   cd nd-se
+   ```
+
+2. **Install dependencies**
+   ```bash
+   npm install        # Frontend
+   pip install -r requirements.txt  # Backend
+   ```
+
+3. **Configure environment**
+   - Copy `.env.example` to `.env`
+   - Update configuration values
+   - Start MongoDB service
+
+<Alert type="tip" title="Pro Tip">
+Use Docker Compose to start all services with one command: `docker-compose up -d`
+</Alert>
+
+</Card>
+
+<Card title="Step 2: Start Development Servers">
+
+Run the following commands in separate terminals:
+
+```bash
+# Terminal 1: Backend
+cd backend
+uvicorn app.main:app --reload
+
+# Terminal 2: Frontend  
+cd frontend
+npm run dev
+```
+
+**Or use the convenience script:**
+```bash
+./start-dev.sh
+```
+
+<Badge variant="success">Servers Running</Badge> - Frontend: http://localhost:3000, Backend: http://localhost:8000
+
+</Card>
+
+<Card title="Step 3: Make Your First Changes">
+
+1. **Edit a component** in `frontend/components/`
+2. **Add an API endpoint** in `backend/app/routers/`
+3. **Test your changes** with hot reload
+4. **Write tests** for new functionality
+5. **Commit your changes** with conventional commits
+
+<Alert type="info" title="Testing">
+Always run `npm test` and `pytest` before committing changes!
+</Alert>
+
+</Card>
+
+## Real-World Examples
+
+### Complete CRUD Operations
+
+<Tabs defaultTab={0}>
+  <Tab label="Frontend Hook">
+    ```typescript
+    import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+    import { apiClient } from '@/lib/api'
+    
+    interface Document {
+      id: string
+      title: string
+      slug: string
+      content: string
+    }
+    
+    export function useDocuments() {
+      return useQuery({
+        queryKey: ['documents'],
+        queryFn: () => apiClient.get<Document[]>('/api/docs')
+      })
+    }
+    
+    export function useCreateDocument() {
+      const queryClient = useQueryClient()
+      
+      return useMutation({
+        mutationFn: (data: Omit<Document, 'id'>) =>
+          apiClient.post<Document>('/api/docs', data),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['documents'] })
+        }
+      })
+    }
+    
+    export function useUpdateDocument() {
+      const queryClient = useQueryClient()
+      
+      return useMutation({
+        mutationFn: ({ slug, data }: { slug: string; data: Partial<Document> }) =>
+          apiClient.put<Document>(\`/api/docs/\${slug}\`, data),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['documents'] })
+        }
+      })
+    }
+    
+    export function useDeleteDocument() {
+      const queryClient = useQueryClient()
+      
+      return useMutation({
+        mutationFn: (slug: string) =>
+          apiClient.delete(\`/api/docs/\${slug}\`),
+        onSuccess: () => {
+          queryClient.invalidateQueries({ queryKey: ['documents'] })
+        }
+      })
+    }
+    ```
+  </Tab>
+  <Tab label="React Component">
+    ```tsx
+    import React from 'react'
+    import { useDocuments, useDeleteDocument } from '@/hooks/useDocuments'
+    import { Button } from '@/components/ui/button'
+    import { Card } from '@/components/ui/card'
+    
+    export function DocumentManager() {
+      const { data: documents, isLoading, error } = useDocuments()
+      const deleteDocument = useDeleteDocument()
+      
+      const handleDelete = async (slug: string) => {
+        if (confirm('Are you sure you want to delete this document?')) {
+          try {
+            await deleteDocument.mutateAsync(slug)
+            // Success feedback would be shown via toast
+          } catch (error) {
+            console.error('Failed to delete document:', error)
+          }
+        }
+      }
+      
+      if (isLoading) return <div>Loading documents...</div>
+      if (error) return <div>Error loading documents</div>
+      
+      return (
+        <div className="space-y-4">
+          <h2 className="text-2xl font-bold">Document Manager</h2>
+          
+          <div className="grid gap-4">
+            {documents?.map(doc => (
+              <Card key={doc.id} className="p-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <h3 className="font-semibold">{doc.title}</h3>
+                    <p className="text-sm text-gray-500">/{doc.slug}</p>
+                  </div>
+                  <div className="space-x-2">
+                    <Button variant="outline" size="sm">
+                      Edit
+                    </Button>
+                    <Button 
+                      variant="destructive" 
+                      size="sm"
+                      onClick={() => handleDelete(doc.slug)}
+                      disabled={deleteDocument.isPending}
+                    >
+                      {deleteDocument.isPending ? 'Deleting...' : 'Delete'}
+                    </Button>
+                  </div>
+                </div>
+              </Card>
+            ))}
+          </div>
+        </div>
+      )
+    }
+    ```
+  </Tab>
+  <Tab label="Backend Endpoint">
+    ```python
+    from fastapi import APIRouter, HTTPException, Depends
+    from typing import List
+    from ..models import Document, DocumentCreate, DocumentUpdate
+    from ..services import DocumentService
+    from ..auth import get_current_user
+    
+    router = APIRouter(prefix="/api/docs", tags=["documents"])
+    
+    @router.get("/", response_model=List[Document])
+    async def get_documents(
+        skip: int = 0,
+        limit: int = 100,
+        service: DocumentService = Depends()
+    ):
+        """Get all documents with pagination"""
+        return await service.get_documents(skip=skip, limit=limit)
+    
+    @router.post("/", response_model=Document, status_code=201)
+    async def create_document(
+        document: DocumentCreate,
+        current_user: dict = Depends(get_current_user),
+        service: DocumentService = Depends()
+    ):
+        """Create a new document"""
+        try:
+            return await service.create_document(
+                document, 
+                created_by=current_user["id"]
+            )
+        except ValueError as e:
+            raise HTTPException(status_code=409, detail=str(e))
+    
+    @router.put("/{slug}", response_model=Document)
+    async def update_document(
+        slug: str,
+        document: DocumentUpdate,
+        current_user: dict = Depends(get_current_user),
+        service: DocumentService = Depends()
+    ):
+        """Update an existing document"""
+        updated = await service.update_document(
+            slug, 
+            document, 
+            updated_by=current_user["id"]
+        )
+        if not updated:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return updated
+    
+    @router.delete("/{slug}")
+    async def delete_document(
+        slug: str,
+        current_user: dict = Depends(get_current_user),
+        service: DocumentService = Depends()
+    ):
+        """Delete a document"""
+        deleted = await service.delete_document(slug)
+        if not deleted:
+            raise HTTPException(status_code=404, detail="Document not found")
+        return {"message": "Document deleted successfully"}
+    ```
+  </Tab>
+</Tabs>
+
+<Alert type="success" title="Complete Example">
+This example shows a full-stack CRUD implementation with React Query for caching, TypeScript for type safety, and FastAPI for the backend API.
+</Alert>
+
+## Next Steps
+
+Ready to build your own interactive documentation? Here's what to explore next:
+
+1. 🎨 **Customize Components** - Modify the MDX components in `/components/MDXComponents.tsx`
+2. 📝 **Write Interactive Docs** - Create your own `.mdx` files with interactive examples  
+3. 🔧 **Extend Functionality** - Add new MDX components for your specific needs
+4. 🚀 **Deploy** - Share your interactive documentation with the world
+
+<Card title="Resources">
+
+- 📚 [MDX Documentation](https://mdxjs.com/)
+- ⚛️ [React Documentation](https://react.dev/)
+- 🟦 [TypeScript Handbook](https://www.typescriptlang.org/docs/)
+- ⚡ [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- 🎨 [Tailwind CSS](https://tailwindcss.com/)
+
+</Card>
