@@ -11,17 +11,17 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, loading } = useAuth();
+  const { user, isLoading } = useAuth();
   const router = useRouter();
 
   // 임시로 인증 체크를 비활성화 (데모용)
   // useEffect(() => {
-  //   if (!loading && !user) {
+  //   if (!isLoading && !user) {
   //     router.push('/auth/login');
   //   }
-  // }, [user, loading, router]);
+  // }, [user, isLoading, router]);
 
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

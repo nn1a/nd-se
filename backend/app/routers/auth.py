@@ -1,18 +1,50 @@
 from fastapi import APIRouter, HTTPException, status, Depends
 from fastapi.security import OAuth2PasswordRequestForm
-from pydantic import BaseModel
+from pydantic import BaseModel, EmailStr
 from typing import Optional
+from datetime import datetime
 
 from ..core.auth import (
     verify_password, 
-    get_password_hash, 
-    create_access_token, 
-    create_refresh_token,
+    get_password_hash,
+    validate_password,
+    verify_token,
+    authenticate_user,
+    create_user_tokens,
     get_current_user
 )
 from ..core.database import database
 
 router = APIRouter()
+
+# 비밀번호 없이 사용자 확인을 위한 헬퍼 함수
+async def authenticate_user_no_password(username: str):
+    """비밀번호 없이 사용자 존재 확인 (refresh token 용)"""
+    try:
+        collection = database.get_collection("users")
+        user = await collection.find_one({"username": username})
+        
+        if not user or not user.get("is_active", True):
+            return None
+        
+        user["user_id"] = str(user["_id"])
+        user.pop("password", None)
+        user.pop("_id", None)
+        
+        return user
+        
+    except Exception:
+        # 개발 환경용 더미 인증
+        if username in ["admin", "user"]:
+            return {
+                "user_id": f"{username}-user-id",
+                "username": username,
+                "email": f"{username}@example.com",
+                "role": "admin" if username == "admin" else "user",
+                "is_active": True,
+                "created_at": "2024-01-01T00:00:00Z"
+            }
+        return None
 
 class Token(BaseModel):
     access_token: str
@@ -21,66 +53,80 @@ class Token(BaseModel):
 
 class UserCreate(BaseModel):
     username: str
-    email: str
+    email: EmailStr
+    password: str
+    
+class UserLogin(BaseModel):
+    username: str
     password: str
 
+class TokenRefresh(BaseModel):
+    refresh_token: str
+
+class PasswordChange(BaseModel):
+    current_password: str
+    new_password: str
+
 class User(BaseModel):
+    user_id: str
     username: str
     email: str
+    role: str = "user"
     is_active: bool = True
+    created_at: str
+    updated_at: Optional[str] = None
 
 @router.post("/token", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
     """로그인 및 토큰 발급"""
+    user = await authenticate_user(form_data.username, form_data.password)
     
-    try:
-        collection = database.get_collection("users")
-        user = await collection.find_one({"username": form_data.username})
-        
-        if not user or not verify_password(form_data.password, user["hashed_password"]):
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
-        
-        access_token = create_access_token(data={"sub": user["username"]})
-        refresh_token = create_refresh_token(data={"sub": user["username"]})
-        
-        return {
-            "access_token": access_token,
-            "refresh_token": refresh_token,
-            "token_type": "bearer"
-        }
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    except HTTPException:
-        raise
-    except Exception as e:
-        # 개발 환경에서는 테스트 계정 허용
-        if form_data.username == "admin" and form_data.password == "admin":
-            access_token = create_access_token(data={"sub": "admin"})
-            refresh_token = create_refresh_token(data={"sub": "admin"})
-            
-            return {
-                "access_token": access_token,
-                "refresh_token": refresh_token,
-                "token_type": "bearer"
-            }
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Incorrect username or password",
-                headers={"WWW-Authenticate": "Bearer"},
-            )
+    tokens = await create_user_tokens(user)
+    return tokens
+
+@router.post("/login", response_model=Token)
+async def login_json(user_data: UserLogin):
+    """로그인 (JSON 형식)"""
+    user = await authenticate_user(user_data.username, user_data.password)
+    
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Incorrect username or password"
+        )
+    
+    tokens = await create_user_tokens(user)
+    return tokens
 
 @router.post("/register", response_model=User)
 async def register(user_data: UserCreate):
     """사용자 등록"""
     
+    # 비밀번호 유효성 검사
+    if not validate_password(user_data.password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be between 6 and 128 characters"
+        )
+    
+    # 사용자명 유효성 검사
+    if len(user_data.username) < 3 or len(user_data.username) > 50:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username must be between 3 and 50 characters"
+        )
+    
     try:
         collection = database.get_collection("users")
         
-        # 사용자 존재 여부 확인
+        # 사용자 중복 확인
         existing_user = await collection.find_one({"username": user_data.username})
         if existing_user:
             raise HTTPException(
@@ -88,8 +134,8 @@ async def register(user_data: UserCreate):
                 detail="Username already registered"
             )
         
-        # 이메일 존재 여부 확인
-        existing_email = await collection.find_one({"email": user_data.email})
+        # 이메일 중복 확인
+        existing_email = await collection.find_one({"email": str(user_data.email)})
         if existing_email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
@@ -98,19 +144,27 @@ async def register(user_data: UserCreate):
         
         # 새 사용자 생성
         hashed_password = get_password_hash(user_data.password)
+        current_time = datetime.utcnow().isoformat()
+        
         new_user = {
             "username": user_data.username,
-            "email": user_data.email,
-            "hashed_password": hashed_password,
-            "is_active": True
+            "email": str(user_data.email),
+            "password": hashed_password,
+            "role": "user",
+            "is_active": True,
+            "created_at": current_time,
+            "updated_at": current_time
         }
         
-        await collection.insert_one(new_user)
+        result = await collection.insert_one(new_user)
         
         return User(
+            user_id=str(result.inserted_id),
             username=user_data.username,
-            email=user_data.email,
-            is_active=True
+            email=str(user_data.email),
+            role="user",
+            is_active=True,
+            created_at=current_time
         )
     
     except HTTPException:
@@ -118,35 +172,102 @@ async def register(user_data: UserCreate):
     except Exception as e:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to register user"
+            detail=f"Failed to register user: {str(e)}"
         )
+
+@router.post("/refresh", response_model=Token)
+async def refresh_token(token_data: TokenRefresh):
+    """리프레시 토큰으로 새 액세스 토큰 발급"""
+    payload = verify_token(token_data.refresh_token, "refresh")
+    
+    if not payload:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid refresh token"
+        )
+    
+    username = payload.get("sub")
+    user_id = payload.get("user_id")
+    
+    if not username or not user_id:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid token payload"
+        )
+    
+    # 사용자 상태 확인
+    user = await authenticate_user_no_password(username)  # 비밀번호 확인 없이 사용자 존재 확인
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found or inactive"
+        )
+    
+    # 새 토큰 발급
+    tokens = await create_user_tokens(user)
+    return tokens
 
 @router.get("/me", response_model=User)
 async def get_current_user_info(current_user: dict = Depends(get_current_user)):
     """현재 사용자 정보 가져오기"""
+    return User(
+        user_id=current_user["user_id"],
+        username=current_user["username"],
+        email=current_user["email"],
+        role=current_user.get("role", "user"),
+        is_active=current_user.get("is_active", True),
+        created_at=current_user.get("created_at", ""),
+        updated_at=current_user.get("updated_at")
+    )
+
+@router.post("/change-password")
+async def change_password(
+    password_data: PasswordChange,
+    current_user: dict = Depends(get_current_user)
+):
+    """비밀번호 변경"""
+    
+    # 비밀번호 유효성 검사
+    if not validate_password(password_data.new_password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="New password must be between 6 and 128 characters"
+        )
     
     try:
         collection = database.get_collection("users")
-        user = await collection.find_one({"username": current_user["username"]})
         
-        if not user:
+        # 현재 비밀번호 확인
+        user = await collection.find_one({"_id": current_user["user_id"]})
+        if not user or not verify_password(password_data.current_password, user["password"]):
             raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="User not found"
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Current password is incorrect"
             )
         
-        return User(
-            username=user["username"],
-            email=user["email"],
-            is_active=user.get("is_active", True)
+        # 새 비밀번호로 업데이트
+        new_hashed_password = get_password_hash(password_data.new_password)
+        await collection.update_one(
+            {"_id": current_user["user_id"]},
+            {
+                "$set": {
+                    "password": new_hashed_password,
+                    "updated_at": datetime.utcnow().isoformat()
+                }
+            }
         )
-    
+        
+        return {"message": "Password changed successfully"}
+        
     except HTTPException:
         raise
     except Exception as e:
-        # 개발 환경에서는 현재 사용자 정보 반환
-        return User(
-            username=current_user["username"],
-            email=current_user.get("email", f"{current_user['username']}@example.com"),
-            is_active=True
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to change password: {str(e)}"
         )
+
+@router.post("/logout")
+async def logout(current_user: dict = Depends(get_current_user)):
+    """로그아웃 (토큰 무효화 - 실제로는 클라이언트에서 토큰 삭제)"""
+    return {"message": "Logged out successfully"}

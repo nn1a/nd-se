@@ -1,9 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
-import { useUsers } from '@/hooks/api';
-import { formatDistanceToNow } from 'date-fns';
-import { ko } from 'date-fns/locale';
+import { useQuery } from '@tanstack/react-query';
+import { getUsersApiUsersGetOptions } from '../../../src/lib/api/@tanstack/react-query.gen';
 
 interface User {
   id: string;
@@ -18,17 +17,23 @@ interface User {
 }
 
 export default function UsersPage() {
-  const { data: users, isLoading, error } = useUsers();
+  const { data: users, isLoading, error } = useQuery(
+    getUsersApiUsersGetOptions({
+      query: { skip: 0, limit: 100 }
+    })
+  );
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState('all');
 
   const filteredUsers = React.useMemo(() => {
     if (!users) return [];
     
-    return users.filter((user: User) => {
-      const matchesSearch = user.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                          user.full_name.toLowerCase().includes(searchTerm.toLowerCase());
+    const userList = (users as any) || [];
+    
+    return userList.filter((user: User) => {
+      const matchesSearch = user.username?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          user.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                          user.full_name?.toLowerCase().includes(searchTerm.toLowerCase());
       
       const matchesRole = filterRole === 'all' || user.role === filterRole;
       
@@ -122,7 +127,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">활성 사용자</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users?.filter((user: User) => user.is_active).length || 0}
+                    {((users as any) || []).filter((user: any) => user.is_active).length || 0}
                   </dd>
                 </dl>
               </div>
@@ -142,7 +147,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">관리자</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users?.filter((user: User) => user.is_superuser).length || 0}
+                    {((users as any) || []).filter((user: any) => user.is_superuser).length || 0}
                   </dd>
                 </dl>
               </div>
@@ -162,7 +167,7 @@ export default function UsersPage() {
                 <dl>
                   <dt className="text-sm font-medium text-gray-500 truncate">일반 사용자</dt>
                   <dd className="text-lg font-medium text-gray-900">
-                    {users?.filter((user: User) => !user.is_superuser).length || 0}
+                    {((users as any) || []).filter((user: any) => !user.is_superuser).length || 0}
                   </dd>
                 </dl>
               </div>
@@ -254,10 +259,10 @@ export default function UsersPage() {
                         @{user.username} • {user.email}
                       </div>
                       <div className="text-sm text-gray-500">
-                        가입일: {formatDistanceToNow(new Date(user.created_at), { addSuffix: true, locale: ko })}
+                        가입일: {new Date(user.created_at).toLocaleDateString('ko-KR')}
                         {user.last_login && (
                           <span className="ml-4">
-                            마지막 로그인: {formatDistanceToNow(new Date(user.last_login), { addSuffix: true, locale: ko })}
+                            마지막 로그인: {new Date(user.last_login).toLocaleDateString('ko-KR')}
                           </span>
                         )}
                       </div>

@@ -9,7 +9,7 @@ async def load_test_documents():
     
     # MongoDB connection
     MONGODB_URL = os.getenv("MONGODB_URL", "mongodb://localhost:27017")
-    DATABASE_NAME = os.getenv("DATABASE_NAME", "nd_se")
+    DATABASE_NAME = os.getenv("DATABASE_NAME", "nd_se_db")
     
     client = AsyncIOMotorClient(MONGODB_URL)
     db = client[DATABASE_NAME]
@@ -23,7 +23,8 @@ async def load_test_documents():
         await nav_collection.delete_many({})
         
         # Base path for test documents
-        base_path = Path("/Users/nn/nd-se/docs-testdata")
+        current_dir = Path(__file__).parent.parent
+        base_path = current_dir / "docs-testdata"
         
         # Document list to store all documents
         documents = []
@@ -243,7 +244,8 @@ async def load_test_documents():
 
 def get_file_tree():
     """Print the file tree structure"""
-    base_path = Path("/Users/nn/nd-se/docs-testdata")
+    current_dir = Path(__file__).parent.parent
+    base_path = current_dir / "docs-testdata"
     
     print("📂 Test Data File Structure:")
     print("docs-testdata/")

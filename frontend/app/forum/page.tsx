@@ -1,35 +1,59 @@
-import Link from 'next/link'
+'use client';
 
-interface ForumPost {
-  id: string
-  title: string
-  content: string
-  author: string
-  date: string
-  replies: number
-  views: number
-  tags: string[]
-}
+import Link from 'next/link';
+import { useQuery } from '@tanstack/react-query';
+import { getForumPostsApiForumGetOptions } from '../../src/lib/api/@tanstack/react-query.gen';
 
-async function getForumPosts(): Promise<ForumPost[]> {
-  try {
-    const response = await fetch('http://localhost:8000/api/forum', {
-      next: { revalidate: 30 }
+export default function ForumPage() {
+  const { data: posts, isLoading, error } = useQuery(
+    getForumPostsApiForumGetOptions({
+      query: { skip: 0, limit: 20 }
     })
-    
-    if (!response.ok) {
-      return []
-    }
-    
-    return await response.json()
-  } catch (error) {
-    console.error('Failed to fetch forum posts:', error)
-    return []
-  }
-}
+  );
 
-export default async function ForumPage() {
-  const posts = await getForumPosts()
+  if (isLoading) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="animate-pulse space-y-6">
+          <div className="flex items-center justify-between mb-8">
+            <div>
+              <div className="h-8 bg-gray-200 rounded w-32 mb-2"></div>
+              <div className="h-6 bg-gray-200 rounded w-48"></div>
+            </div>
+            <div className="h-10 bg-gray-200 rounded w-32"></div>
+          </div>
+          <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+            <div className="px-6 py-4 bg-gray-50 border-b">
+              <div className="h-4 bg-gray-200 rounded w-full"></div>
+            </div>
+            <div className="space-y-4 p-6">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-12 bg-gray-200 rounded"></div>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="container mx-auto px-4 py-8">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">게시판을 불러올 수 없습니다</h3>
+          <p className="text-red-600">
+            백엔드 서버가 실행되지 않았거나 연결에 문제가 있습니다.
+          </p>
+          <p className="text-sm text-red-500 mt-2">
+            Error: {(error as any).message}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  const forumPosts = (posts as any) || [];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -57,13 +81,13 @@ export default async function ForumPage() {
           </div>
         </div>
 
-        {posts.length === 0 ? (
+        {forumPosts.length === 0 ? (
           <div className="px-6 py-12 text-center">
             <p className="text-gray-600">게시글이 없습니다.</p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
-            {posts.map((post) => (
+            {forumPosts.map((post: any) => (
               <div key={post.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
                 <div className="grid grid-cols-12 gap-4 items-center">
                   <div className="col-span-6">
@@ -74,9 +98,9 @@ export default async function ForumPage() {
                       >
                         {post.title}
                       </Link>
-                      {post.tags.length > 0 && (
+                      {post.tags?.length > 0 && (
                         <div className="flex gap-1">
-                          {post.tags.map((tag) => (
+                          {post.tags?.map((tag: string) => (
                             <span
                               key={tag}
                               className="inline-block bg-gray-100 text-gray-600 text-xs px-2 py-1 rounded"
@@ -107,7 +131,7 @@ export default async function ForumPage() {
         )}
       </div>
 
-      {posts.length > 0 && (
+      {forumPosts.length > 0 && (
         <div className="mt-8 flex justify-center">
           <div className="flex space-x-2">
             <button className="px-3 py-2 text-sm text-gray-500 hover:text-gray-700">

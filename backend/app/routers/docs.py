@@ -19,38 +19,63 @@ async def get_navigation_collection():
 async def list_documents(
     page: int = 1,
     limit: int = 10,
+    version: Optional[str] = None,
+    language: Optional[str] = None,
     category: Optional[str] = None,
     search: Optional[str] = None
 ):
-    """문서 목록 조회"""
+    """문서 목록 조회 (버전/언어 필터링 지원)"""
     try:
         collection = await get_docs_collection()
         
         # 쿼리 조건 구성
         query = {}
         
+        if version:
+            query["version"] = version
+        if language:
+            query["language"] = language    
         if category:
-            query["metadata.category"] = category
+            query["category"] = category
             
         if search:
-            query["$or"] = [
+            search_conditions = [
                 {"title": {"$regex": search, "$options": "i"}},
                 {"content": {"$regex": search, "$options": "i"}}
             ]
+            if "$or" in query:
+                # 기존 $or 조건과 search 조건을 $and로 결합
+                query = {"$and": [{"$or": query["$or"]}, {"$or": search_conditions}]}
+            else:
+                query["$or"] = search_conditions
+        
+        # 디버그: 쿼리 확인
+        print(f"DEBUG: Query: {query}")
         
         # 전체 개수 계산
         total = await collection.count_documents(query)
+        print(f"DEBUG: Total documents found: {total}")
+        
+        # 디버그: 모든 문서 개수 확인
+        all_docs_count = await collection.count_documents({})
+        print(f"DEBUG: All documents in collection: {all_docs_count}")
         
         # 페이지네이션 적용
         skip = (page - 1) * limit
         cursor = collection.find(
             query,
             {"content": 0}  # content 필드 제외 (목록에서는 불필요)
-        ).skip(skip).limit(limit)
+        ).skip(skip).limit(limit).sort("order", 1)
         
         documents = []
         async for doc in cursor:
             doc["_id"] = str(doc["_id"])  # ObjectId를 문자열로 변환
+            # 디버그: 실제 DB 데이터 확인
+            if not doc.get('slug'):
+                raise HTTPException(
+                    status_code=500,
+                    detail=f"Debug: Missing slug in doc: {list(doc.keys())}"
+                )
             documents.append(doc)
         
         pages = (total + limit - 1) // limit  # 전체 페이지 수
@@ -61,7 +86,9 @@ async def list_documents(
             "page": page,
             "pages": pages,
             "has_next": page < pages,
-            "has_prev": page > 1
+            "has_prev": page > 1,
+            "debug_query": str(query),
+            "debug_all_docs_count": all_docs_count
         }
         
     except Exception as e:
@@ -76,18 +103,14 @@ async def get_navigation():
     try:
         collection = await get_navigation_collection()
         
-        # 모든 네비게이션 항목을 order 순으로 가져오기
-        nav_docs = await collection.find({}).sort("order", 1).to_list(None)
+        # 네비게이션 문서 가져오기 (단일 문서에 모든 네비게이션 구조가 포함됨)
+        nav_doc = await collection.find_one({})
         
-        # ObjectId를 문자열로 변환하고 navigation 구조 생성
-        navigation = []
-        for doc in nav_docs:
-            # _id 필드 제거 (프론트엔드에서 불필요)
-            if "_id" in doc:
-                del doc["_id"]
-            navigation.append(doc)
+        if not nav_doc or "navigation" not in nav_doc:
+            return {"navigation": []}
         
-        return {"navigation": navigation}
+        # navigation 필드만 반환
+        return {"navigation": nav_doc["navigation"]}
         
     except Exception as e:
         raise HTTPException(
@@ -95,13 +118,50 @@ async def get_navigation():
             detail=f"네비게이션 조회 중 오류가 발생했습니다: {str(e)}"
         )
 
-@router.get("/{slug:path}")
-async def get_document(slug: str):
-    """특정 문서 조회 (slug 기준)"""
+@router.get("/{version}/{lang}/{slug:path}")
+async def get_document_versioned(version: str, lang: str, slug: str):
+    """버전별/언어별 문서 조회"""
     try:
         collection = await get_docs_collection()
-        document = await collection.find_one({"slug": slug})
+        document = await collection.find_one({
+            "version": version,
+            "language": lang,
+            "slug": slug
+        })
         
+        if not document:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"문서를 찾을 수 없습니다: {version}/{lang}/{slug}"
+            )
+        
+        # ObjectId를 문자열로 변환
+        document["_id"] = str(document["_id"])
+        
+        # 조회수 증가 (선택적)
+        await collection.update_one(
+            {"version": version, "language": lang, "slug": slug},
+            {"$inc": {"views": 1}, "$set": {"last_viewed": datetime.utcnow()}}
+        )
+        
+        return document
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"문서 조회 중 오류가 발생했습니다: {str(e)}"
+        )
+
+@router.get("/{slug:path}")
+async def get_document(slug: str):
+    """문서 조회 (slug 기준)"""
+    try:
+        collection = await get_docs_collection()
+        # slug로 직접 검색
+        document = await collection.find_one({"slug": slug})
+            
         if not document:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

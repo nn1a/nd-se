@@ -3,13 +3,10 @@
 import React, { useState, useEffect } from 'react'
 import { useParams } from 'next/navigation'
 import { ChevronDownIcon, ChevronRightIcon } from '@heroicons/react/24/outline'
-import { useDocument, useDocumentNavigation } from '../../../lib/hooks/useDocs'
+import { useQuery } from '@tanstack/react-query'
+import { getDocumentApiDocsSlugGetOptions, getNavigationApiDocsNavigationGetOptions } from '../../../src/lib/api/@tanstack/react-query.gen'
+import MDXRenderer from '../../../components/MDXRenderer'
 
-interface NavigationItem {
-  slug: string
-  title: string
-  children?: NavigationItem[]
-}
 
 interface TocItem {
   id: string
@@ -19,7 +16,9 @@ interface TocItem {
 
 function DocumentNavigation({ currentSlug }: { currentSlug: string }) {
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set())
-  const { data: navigationData, isLoading } = useDocumentNavigation()
+  const { data: navigationData, isLoading } = useQuery(
+    getNavigationApiDocsNavigationGetOptions()
+  )
 
   const toggleExpanded = (slug: string) => {
     const newExpanded = new Set(expandedItems)
@@ -91,7 +90,7 @@ function DocumentNavigation({ currentSlug }: { currentSlug: string }) {
       <div className="p-4">
         <h2 className="text-lg font-semibold text-gray-900 mb-4">Documentation</h2>
         <div className="space-y-1">
-          {navigationData?.navigation?.map(item => renderNavigationItem(item))}
+          {((navigationData as any)?.navigation || []).map((item: any) => renderNavigationItem(item))}
         </div>
       </div>
     </nav>
@@ -107,7 +106,7 @@ function TableOfContents({ content, activeId }: { content: string; activeId: str
       const remarkGfm = await import('remark-gfm')
       
       try {
-        const tree = await remark()
+        const tree = remark()
           .use(remarkGfm.default)
           .parse(content)
         
@@ -192,231 +191,89 @@ function TableOfContents({ content, activeId }: { content: string; activeId: str
 }
 
 function MarkdownRenderer({ content, setActiveId }: { content: string; setActiveId: (id: string) => void }) {
-  const [htmlContent, setHtmlContent] = useState('')
-
   useEffect(() => {
-    const processContent = async () => {
-      try {
-        const { remark } = await import('remark')
-        const remarkHtml = await import('remark-html')
-        const remarkGfm = await import('remark-gfm')
-        const { parseMDXComponents } = await import('../../../components/MDXProcessor')
-        
-        // Check if content contains MDX-style components
-        const hasMDXComponents = /<[A-Z]/.test(content)
-        
-        // Process admonitions first
-        const processAdmonitions = (text: string) => {
-          return text.replace(
-            /:::(note|tip|info|caution|danger)(?:\s+(.+))?\n([\s\S]*?):::/g,
-            (match, type, title, content) => {
-              const admonitionTitle = title || type.charAt(0).toUpperCase() + type.slice(1)
-              return `<div class="admonition admonition-${type}">
-                <div class="admonition-heading">${admonitionTitle}</div>
-                ${content.trim()}
-              </div>`
-            }
-          )
-        }
-
-        let processedContent = processAdmonitions(content)
-        
-        // First process with remark to handle markdown
-        const remarkResult = await remark()
-          .use(remarkGfm.default)
-          .use(remarkHtml.default, { sanitize: false })
-          .process(processedContent)
-        
-        let htmlResult = String(remarkResult)
-        
-        // Fix any remaining issues with code blocks that remark might have created
-        htmlResult = htmlResult
-          .replace(/<p>```(\w+)?\s*\n([\s\S]*?)\n```<\/p>/g, 
-            (match: string, lang: string, code: string) => {
-              const cleanCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-              return `<pre><code class="language-${lang || 'plaintext'}">${cleanCode}</code></pre>`
-            }
-          )
-          .replace(/```(\w+)?\s*\n([\s\S]*?)\n```/g, 
-            (match: string, lang: string, code: string) => {
-              const cleanCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-              return `<pre><code class="language-${lang || 'plaintext'}">${cleanCode}</code></pre>`
-            }
-          )
-        
-        // Then process MDX components if present
-        if (hasMDXComponents) {
-          htmlResult = parseMDXComponents(htmlResult)
-        }
-        
-        setHtmlContent(htmlResult)
-      } catch (error) {
-        console.error('Error processing content:', error)
-        setHtmlContent(`<div class="admonition admonition-danger">
-          <div class="admonition-heading">Error</div>
-          <p>Error rendering content: ${error instanceof Error ? error.message : 'Unknown error'}</p>
-        </div>`)
-      }
-    }
-
-    if (content) {
-      processContent()
-    }
-  }, [content])
-
-  useEffect(() => {
-    if (!htmlContent) return
+    if (!content) return
 
     const contentElement = document.getElementById('markdown-content')
-    if (contentElement) {
-      contentElement.innerHTML = htmlContent
-    }
+    if (!contentElement) return
 
-    // Process MDX components after HTML is set
-    const processMDXAfterRender = async () => {
-      const { processMDXComponents } = await import('../../../components/MDXProcessor')
-      if (contentElement) {
-        processMDXComponents(contentElement)
-      }
-    }
-
-    processMDXAfterRender()
-
-    // Generate proper IDs for headings and add anchor links
-    const headings = contentElement?.querySelectorAll('h1, h2, h3, h4, h5, h6')
-    headings?.forEach((heading) => {
-      const headingElement = heading as HTMLElement
-      const id = heading.textContent?.toLowerCase()
-        .replace(/[^a-z0-9\s-]/g, '')
-        .replace(/\s+/g, '-')
-        .replace(/(^-|-$)/g, '') || ''
-      heading.id = id
+    // Set up intersection observer for TOC after content renders
+    const setupObserver = () => {
+      const headings = contentElement.querySelectorAll('h1, h2, h3, h4, h5, h6')
       
-      // Add anchor link
-      const anchor = document.createElement('a')
-      anchor.href = `#${id}`
-      anchor.className = 'anchor-link'
-      anchor.innerHTML = '#'
-      anchor.style.cssText = `
-        float: left;
-        margin-left: -1.5rem;
-        padding-right: 0.5rem;
-        text-decoration: none;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-        color: var(--docs-color-primary);
-      `
-      
-      headingElement.style.position = 'relative'
-      heading.prepend(anchor)
-      
-      headingElement.addEventListener('mouseenter', () => {
-        anchor.style.opacity = '1'
-      })
-      headingElement.addEventListener('mouseleave', () => {
-        anchor.style.opacity = '0'
-      })
-    })
-
-    // Process code blocks for syntax highlighting
-    const codeBlocks = contentElement?.querySelectorAll('pre code')
-    codeBlocks?.forEach((block) => {
-      const pre = block.parentElement
-      if (pre && !pre.classList.contains('bg-gray-900')) {
-        // Apply default styling if not already styled
-        pre.className = 'bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm rounded-lg border border-gray-300'
-      }
-    })
-
-    // Fix any text nodes that contain raw markdown or HTML
-    const walker = document.createTreeWalker(
-      contentElement!,
-      NodeFilter.SHOW_TEXT,
-      null
-    )
-    
-    const textNodes: Text[] = []
-    let node
-    while (node = walker.nextNode()) {
-      textNodes.push(node as Text)
-    }
-    
-    textNodes.forEach((textNode) => {
-      const text = textNode.textContent || ''
-      
-      // Check if text contains raw markdown code blocks
-      if (text.includes('```') && !textNode.parentElement?.tagName.toLowerCase().includes('code')) {
-        // Replace markdown code blocks with proper HTML
-        const processedText = text.replace(/```(\w+)?\n([\s\S]*?)\n```/g, (match, lang, code) => {
-          const cleanCode = code.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-          return `<pre class="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm rounded-lg border border-gray-300"><code class="language-${lang || 'plaintext'}">${cleanCode}</code></pre>`
-        })
+      // Generate proper IDs for headings and add anchor links
+      headings.forEach((heading) => {
+        const headingElement = heading as HTMLElement
+        const id = heading.textContent?.toLowerCase()
+          .replace(/[^a-z0-9\s-]/g, '')
+          .replace(/\s+/g, '-')
+          .replace(/(^-|-$)/g, '') || ''
+        heading.id = id
         
-        if (processedText !== text) {
-          const tempDiv = document.createElement('div')
-          tempDiv.innerHTML = processedText
+        // Add anchor link
+        if (!heading.querySelector('.anchor-link')) {
+          const anchor = document.createElement('a')
+          anchor.href = `#${id}`
+          anchor.className = 'anchor-link'
+          anchor.innerHTML = '#'
+          anchor.style.cssText = `
+            float: left;
+            margin-left: -1.5rem;
+            padding-right: 0.5rem;
+            text-decoration: none;
+            opacity: 0;
+            transition: opacity 0.2s ease;
+            color: #3b82f6;
+          `
           
-          // Replace the text node with the new elements
-          const fragment = document.createDocumentFragment()
-          while (tempDiv.firstChild) {
-            fragment.appendChild(tempDiv.firstChild)
-          }
-          textNode.parentNode?.replaceChild(fragment, textNode)
-        }
-      }
-      
-      // Check if text contains raw HTML tags
-      else if (text.includes('</code></pre>') || text.includes('<code>')) {
-        // This might be escaped HTML that should be rendered
-        const processedText = text
-          .replace(/&lt;pre[^&]*&gt;&lt;code[^&]*&gt;([\s\S]*?)&lt;\/code&gt;&lt;\/pre&gt;/g, 
-            '<pre class="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm rounded-lg border border-gray-300"><code>$1</code></pre>')
-          .replace(/&lt;/g, '<')
-          .replace(/&gt;/g, '>')
-          .replace(/&amp;/g, '&')
-        
-        if (processedText !== text && processedText.includes('<')) {
-          const tempDiv = document.createElement('div')
-          tempDiv.innerHTML = processedText
+          headingElement.style.position = 'relative'
+          heading.prepend(anchor)
           
-          const fragment = document.createDocumentFragment()
-          while (tempDiv.firstChild) {
-            fragment.appendChild(tempDiv.firstChild)
-          }
-          textNode.parentNode?.replaceChild(fragment, textNode)
+          headingElement.addEventListener('mouseenter', () => {
+            anchor.style.opacity = '1'
+          })
+          headingElement.addEventListener('mouseleave', () => {
+            anchor.style.opacity = '0'
+          })
         }
+      })
+
+      // Set up intersection observer for TOC
+      const observer = new IntersectionObserver(
+        (entries) => {
+          entries.forEach((entry) => {
+            if (entry.isIntersecting) {
+              setActiveId(entry.target.id)
+            }
+          })
+        },
+        { rootMargin: '-10% 0% -80% 0%' }
+      )
+
+      // Observe all headings
+      headings.forEach((heading) => {
+        observer.observe(heading)
+      })
+
+      return () => {
+        observer.disconnect()
       }
-    })
+    }
 
-    // Set up intersection observer for TOC
-    const observer = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
-          if (entry.isIntersecting) {
-            setActiveId(entry.target.id)
-          }
-        })
-      },
-      { rootMargin: '-10% 0% -80% 0%' }
-    )
-
-    // Observe all headings
-    headings?.forEach((heading) => {
-      observer.observe(heading)
-    })
-
+    // Wait for MDX content to render, then setup observer
+    const timeout = setTimeout(setupObserver, 100)
+    
     return () => {
-      observer.disconnect()
+      clearTimeout(timeout)
     }
-  }, [htmlContent])
+  }, [content, setActiveId])
 
   return (
     <div className="ml-64 mr-64 overflow-y-auto">
       <div className="max-w-4xl mx-auto p-8">
-        <div
-          id="markdown-content"
-          className="docusaurus-docs docusaurus-prose prose-headings:scroll-mt-20"
-        />
+        <div id="markdown-content" className="docusaurus-docs docusaurus-prose prose-headings:scroll-mt-20">
+          <MDXRenderer content={content} />
+        </div>
       </div>
     </div>
   )
@@ -427,7 +284,11 @@ export default function DocumentPage() {
   const slug = Array.isArray(params?.slug) ? params.slug.join('/') : params?.slug || ''
   const [activeId, setActiveId] = useState('')
   
-  const { data: doc, isLoading, error } = useDocument(slug)
+  const { data: doc, isLoading, error } = useQuery(
+    getDocumentApiDocsSlugGetOptions({
+      path: { slug }
+    })
+  )
 
   if (isLoading) {
     return (
@@ -468,8 +329,8 @@ export default function DocumentPage() {
   return (
     <div className="h-screen bg-gray-50 flex overflow-hidden">
       <DocumentNavigation currentSlug={slug} />
-      <MarkdownRenderer content={doc.content} setActiveId={setActiveId} />
-      <TableOfContents content={doc.content} activeId={activeId} />
+      <MarkdownRenderer content={(doc as any)?.content || ''} setActiveId={setActiveId} />
+      <TableOfContents content={(doc as any)?.content || ''} activeId={activeId} />
     </div>
   )
 }

@@ -3,37 +3,30 @@
 import { useState, useEffect, createContext, useContext } from 'react';
 
 interface User {
-  id: string;
+  user_id: string;
   email: string;
   username: string;
+  role?: string;
 }
 
 interface AuthContextType {
   user: User | null;
-  loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  isLoading: boolean;
+  login: (username: string, password: string) => Promise<void>;
   logout: () => void;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
-
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(true);
 
   const checkAuth = async () => {
     try {
       const token = localStorage.getItem('access_token');
       if (!token) {
-        setLoading(false);
+        setIsLoading(false);
         return;
       }
 
@@ -54,7 +47,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     } catch (error) {
       console.error('Auth check failed:', error);
     } finally {
-      setLoading(false);
+      setIsLoading(false);
     }
   };
 
@@ -62,13 +55,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     checkAuth();
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (username: string, password: string) => {
     const response = await fetch('/api/auth/login', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: JSON.stringify({ email, password }),
+      body: JSON.stringify({ username, password }),
     });
 
     if (!response.ok) {
@@ -80,7 +73,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     localStorage.setItem('access_token', data.access_token);
     localStorage.setItem('refresh_token', data.refresh_token);
     
-    setUser(data.user);
+    // 사용자 정보를 다시 가져와서 설정
+    await checkAuth();
   };
 
   const logout = () => {
@@ -90,8 +84,16 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, isLoading, login, logout }}>
       {children}
     </AuthContext.Provider>
   );
+};
+
+export const useAuth = () => {
+  const context = useContext(AuthContext);
+  if (context === undefined) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
 };

@@ -1,42 +1,35 @@
 'use client'
 
-import { useEffect, useState } from 'react'
-
-interface DashboardData {
-  users: number
-  posts: number
-  views: number
-  comments: number
-}
+import { useQuery } from '@tanstack/react-query'
+import { getDashboardDataApiDashboardGetOptions } from '../../src/lib/api/@tanstack/react-query.gen'
 
 export default function DashboardPage() {
-  const [data, setData] = useState<DashboardData | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { data, isLoading, error } = useQuery(
+    getDashboardDataApiDashboardGetOptions()
+  )
 
-  useEffect(() => {
-    async function fetchData() {
-      try {
-        const response = await fetch('/api/dashboard')
-        if (response.ok) {
-          const result = await response.json()
-          setData(result)
-        }
-      } catch (error) {
-        console.error('Failed to fetch dashboard data:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchData()
-  }, [])
-
-  if (loading) {
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center py-12">
         <div className="text-center">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">데이터를 불러오는 중...</p>
+        </div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <h3 className="text-lg font-semibold text-red-800 mb-2">대시보드 데이터를 불러올 수 없습니다</h3>
+          <p className="text-red-600">
+            백엔드 서버가 실행되지 않았거나 연결에 문제가 있습니다.
+          </p>
+          <p className="text-sm text-red-500 mt-2">
+            Error: {(error as any).message}
+          </p>
         </div>
       </div>
     )
@@ -65,7 +58,7 @@ export default function DashboardPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">총 사용자</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{data.users.toLocaleString()}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{(data as any)?.users?.toLocaleString() || '0'}</p>
               </div>
             </div>
           </div>
@@ -79,7 +72,7 @@ export default function DashboardPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">게시물 수</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{data.posts.toLocaleString()}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{(data as any)?.posts?.toLocaleString() || '0'}</p>
               </div>
             </div>
           </div>
@@ -94,7 +87,7 @@ export default function DashboardPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">총 조회수</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{data.views.toLocaleString()}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{(data as any)?.views?.toLocaleString() || '0'}</p>
               </div>
             </div>
           </div>
@@ -108,7 +101,7 @@ export default function DashboardPage() {
               </div>
               <div className="ml-4">
                 <p className="text-sm text-gray-600 dark:text-gray-400">댓글 수</p>
-                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{data.comments.toLocaleString()}</p>
+                <p className="text-2xl font-semibold text-gray-900 dark:text-white">{(data as any)?.comments?.toLocaleString() || '0'}</p>
               </div>
             </div>
           </div>

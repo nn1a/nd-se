@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import os
 import json
 
-from .routers import docs, blog, forum, dashboard, auth, analytics, users
+from .routers import docs, blog, forum, dashboard, auth, analytics, users, search, upload
 from .core.config import settings
 from .core.database import database
 from .core.auth import get_current_user
@@ -35,6 +35,8 @@ app.include_router(forum.router, prefix="/api/forum", tags=["forum"])
 app.include_router(dashboard.router, prefix="/api/dashboard", tags=["dashboard"])
 app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"])
 app.include_router(users.router, prefix="/api/users", tags=["users"])
+app.include_router(search.router, prefix="/api/search", tags=["search"])
+app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
 
 @app.on_event("startup")
 async def startup_event():

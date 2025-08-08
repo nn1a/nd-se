@@ -103,11 +103,13 @@ export const Alert = ({
   title?: string
   children: React.ReactNode 
 }) => {
+  const baseClasses = "border border-l-4 p-4 mb-6 rounded-r-lg shadow-sm"
+  
   const styles = {
-    info: 'bg-blue-50 border-blue-200 text-blue-800',
-    warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
-    error: 'bg-red-50 border-red-200 text-red-800',
-    success: 'bg-green-50 border-green-200 text-green-800',
+    info: 'bg-blue-50 border-blue-200 border-l-blue-500 text-blue-900',
+    warning: 'bg-yellow-50 border-yellow-200 border-l-yellow-500 text-yellow-900',
+    error: 'bg-red-50 border-red-200 border-l-red-500 text-red-900',
+    success: 'bg-green-50 border-green-200 border-l-green-500 text-green-900',
   }
 
   const icons = {
@@ -118,14 +120,16 @@ export const Alert = ({
   }
 
   return (
-    <div className={`border-l-4 p-4 mb-4 rounded-r-lg ${styles[type]}`}>
+    <div className={`${baseClasses} ${styles[type]}`}>
       {title && (
-        <div className="font-semibold mb-2 flex items-center gap-2">
-          <span>{icons[type]}</span>
+        <div className="font-semibold mb-3 flex items-center gap-2 text-lg">
+          <span className="text-xl">{icons[type]}</span>
           {title}
         </div>
       )}
-      <div>{children}</div>
+      <div className="prose prose-sm max-w-none [&>*:last-child]:mb-0">
+        {children}
+      </div>
     </div>
   )
 }
@@ -140,14 +144,19 @@ export const CodeBlock = ({
   children: React.ReactNode 
 }) => {
   return (
-    <div className="mb-4">
+    <div className="mb-6 rounded-lg overflow-hidden border border-gray-300 shadow-sm">
       {title && (
-        <div className="bg-gray-200 px-4 py-2 text-sm font-mono font-semibold text-gray-700 border border-gray-300 rounded-t-lg">
-          {title} {language && <span className="text-gray-500">({language})</span>}
+        <div className="bg-gray-100 border-b border-gray-300 px-4 py-3 flex items-center justify-between">
+          <span className="text-sm font-mono font-semibold text-gray-800">{title}</span>
+          {language && (
+            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-md font-mono">
+              {language}
+            </span>
+          )}
         </div>
       )}
-      <pre className={`bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm ${title ? 'rounded-b-lg' : 'rounded-lg'} border border-gray-300`}>
-        <code>{children}</code>
+      <pre className={`bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm m-0 font-mono leading-relaxed ${title ? '' : 'rounded-lg'}`}>
+        <code className={language ? `language-${language}` : ''}>{children}</code>
       </pre>
     </div>
   )
@@ -163,15 +172,15 @@ export const Tabs = ({
   const [activeTab, setActiveTab] = React.useState(defaultTab)
 
   return (
-    <div className="mb-4">
-      <div className="flex border-b border-gray-200">
+    <div className="mb-6 rounded-lg border border-gray-200 overflow-hidden shadow-sm">
+      <div className="flex bg-gray-50 border-b border-gray-200">
         {children.map((child, index) => (
           <button
             key={index}
-            className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 text-sm font-medium border-b-2 transition-all duration-200 ${
               activeTab === index
-                ? 'text-blue-600 border-blue-600'
-                : 'text-gray-500 border-transparent hover:text-gray-700'
+                ? 'text-blue-600 border-blue-600 bg-white'
+                : 'text-gray-500 border-transparent hover:text-gray-700 hover:bg-gray-100'
             }`}
             onClick={() => setActiveTab(index)}
           >
@@ -179,8 +188,10 @@ export const Tabs = ({
           </button>
         ))}
       </div>
-      <div className="p-4 border border-t-0 border-gray-200 rounded-b-lg">
-        {children[activeTab]}
+      <div className="p-6 bg-white">
+        <div className="prose prose-sm max-w-none [&>*:last-child]:mb-0">
+          {children[activeTab]}
+        </div>
       </div>
     </div>
   )
@@ -206,9 +217,17 @@ export const Card = ({
   className?: string 
 }) => {
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg shadow-sm p-6 mb-4 ${className}`}>
-      {title && <h3 className="text-lg font-semibold mb-3 text-gray-900">{title}</h3>}
-      <div>{children}</div>
+    <div className={`card mb-6 ${className}`}>
+      {title && (
+        <div className="card-header">
+          <h3 className="card-title text-xl">{title}</h3>
+        </div>
+      )}
+      <div className={title ? "card-content" : "card-content pt-6"}>
+        <div className="prose prose-sm max-w-none [&>*:last-child]:mb-0">
+          {children}
+        </div>
+      </div>
     </div>
   )
 }
@@ -221,15 +240,15 @@ export const Badge = ({
   variant?: 'default' | 'success' | 'warning' | 'error' | 'info'
 }) => {
   const variants = {
-    default: 'bg-gray-100 text-gray-800',
-    success: 'bg-green-100 text-green-800',
-    warning: 'bg-yellow-100 text-yellow-800',
-    error: 'bg-red-100 text-red-800',
-    info: 'bg-blue-100 text-blue-800',
+    default: 'bg-gray-100 text-gray-800 border-gray-300',
+    success: 'bg-green-100 text-green-800 border-green-300',
+    warning: 'bg-yellow-100 text-yellow-800 border-yellow-300',
+    error: 'bg-red-100 text-red-800 border-red-300',
+    info: 'bg-blue-100 text-blue-800 border-blue-300',
   }
 
   return (
-    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${variants[variant]}`}>
+    <span className={`inline-flex items-center px-3 py-1 rounded-full text-xs font-semibold border ${variants[variant]} shadow-sm`}>
       {children}
     </span>
   )

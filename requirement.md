@@ -79,6 +79,16 @@
 | 버전 분기 | v1, v2, latest 등으로 구성 |
 | 기본 언어/버전 | 설정 가능 (/docs → /docs/v2/en/intro 리디렉션) |
 
+
+## 5. 🌐 문서 작성 기능
+
+| 항목 | 설명 |
+|------|------|
+| 대상 | 게시판 |
+| 구현 방식 | Web 에티터를 사용하여 문서작성, 이미지 추가, 파일첨부 하여 backend에 저장 |
+| 저장기능 | 임시저장, 저장된 문서 다시 편집 |
+| 추가기능 | 삭제, 편집, 숨김, 비밀글, Q&A, 답글 |
+
 ---
 
 ## 5. ⚙️ 시스템 아키텍처
@@ -113,6 +123,7 @@
 |------|------|
 | 프론트엔드 | Next.js 15+, TypeScript, TailwindCSS v4+, Shadcn UI, React Markdown, MDX |
 | 백엔드 | FastAPI, Uvicorn, Pydantic, Mongodb/DB (선택) |
+| Frontent API | @hey-api/openapi-ts & TanStack Query v5 를 사용하여 backend api를 Frontend에서 자동 api생성 |
 | 검색 | FlexSearch (기본) or Algolia (선택) 또는 다른 검색툴 사용 가능 |
 | 인증 | JWT (Access + Refresh 토큰) |
 | 배포 | Docker + Nginx |
