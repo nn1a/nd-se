@@ -4,6 +4,7 @@ from datetime import datetime
 from bson import ObjectId
 
 from ..core.database import database
+from ..core.revalidation import revalidation_service
 
 router = APIRouter()
 
@@ -213,6 +214,12 @@ async def create_document(document_data: dict):
         created_document = await collection.find_one({"_id": result.inserted_id})
         created_document["_id"] = str(created_document["_id"])
         
+        # Next.js 캐시 무효화 트리거
+        revalidation_service.trigger_revalidation_background(
+            'document-created', 
+            created_document.get('slug')
+        )
+        
         return created_document
         
     except HTTPException:
@@ -265,6 +272,19 @@ async def update_document(slug: str, document_data: dict):
         updated_document = await collection.find_one({"slug": document_data.get("slug", slug)})
         updated_document["_id"] = str(updated_document["_id"])
         
+        # Next.js 캐시 무효화 트리거
+        revalidation_service.trigger_revalidation_background(
+            'document-updated', 
+            updated_document.get('slug')
+        )
+        
+        # 만약 slug가 변경되었다면 기존 slug도 무효화
+        if document_data.get("slug") != slug:
+            revalidation_service.trigger_revalidation_background(
+                'document-updated', 
+                slug
+            )
+        
         return updated_document
         
     except HTTPException:
@@ -297,6 +317,12 @@ async def delete_document(slug: str):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="문서 삭제에 실패했습니다"
             )
+        
+        # Next.js 캐시 무효화 트리거
+        revalidation_service.trigger_revalidation_background(
+            'document-deleted', 
+            slug
+        )
         
         return {"message": f"문서가 성공적으로 삭제되었습니다: {slug}"}
         

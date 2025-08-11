@@ -52,6 +52,21 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
   const fileInputRef = useRef<HTMLInputElement>(null)
   const imageInputRef = useRef<HTMLInputElement>(null)
 
+  // 저장 핸들러
+  const handleSave = useCallback(async (isDraft: boolean = false) => {
+    if (!onSave) return
+    
+    setIsSaving(true)
+    try {
+      await onSave(content, isDraft)
+      setLastSaved(new Date())
+    } catch (error) {
+      console.error('저장 실패:', error)
+    } finally {
+      setIsSaving(false)
+    }
+  }, [onSave, content])
+
   // 자동저장 효과
   useEffect(() => {
     if (!autosave || !onSave) return
@@ -63,7 +78,7 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
     }, autosaveInterval)
 
     return () => clearInterval(interval)
-  }, [content, initialContent, autosave, autosaveInterval, onSave])
+  }, [content, initialContent, autosave, autosaveInterval, handleSave])
 
   // 내용 변경 핸들러
   const handleContentChange = useCallback(() => {
@@ -165,21 +180,6 @@ const RichTextEditor: React.FC<RichTextEditorProps> = ({
       }
       
       handleContentChange()
-    }
-  }
-
-  // 저장 핸들러
-  const handleSave = async (isDraft: boolean = false) => {
-    if (!onSave) return
-    
-    setIsSaving(true)
-    try {
-      await onSave(content, isDraft)
-      setLastSaved(new Date())
-    } catch (error) {
-      console.error('저장 실패:', error)
-    } finally {
-      setIsSaving(false)
     }
   }
 

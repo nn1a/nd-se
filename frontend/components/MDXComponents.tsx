@@ -1,4 +1,5 @@
 import React from 'react'
+import CodeBlock from './CodeBlock'
 
 // Custom MDX components
 export const MDXComponents = {
@@ -47,18 +48,38 @@ export const MDXComponents = {
   ),
 
   // Code blocks
-  pre: (props: any) => (
-    <pre className="bg-gray-100 border border-gray-200 rounded-lg p-4 mb-4 overflow-x-auto text-sm" {...props} />
-  ),
+  pre: (props: any) => {
+    const { children, className, ...restProps } = props
+    const language = className?.replace(/language-/, '') || 'text'
+    
+    return (
+      <CodeBlock 
+        className={className}
+        language={language}
+        showLineNumbers={false}
+        {...restProps}
+      >
+        {children}
+      </CodeBlock>
+    )
+  },
   code: (props: any) => {
-    // Inline code
-    if (!props.className) {
+    const { className, children, ...restProps } = props
+    
+    // If it's inline code (not in a pre block)
+    if (!className) {
       return (
-        <code className="bg-gray-100 border border-gray-200 rounded px-2 py-1 text-sm font-mono text-gray-800" {...props} />
+        <code 
+          className="bg-gray-100 dark:bg-gray-800 text-gray-800 dark:text-gray-200 px-1.5 py-0.5 rounded text-sm font-mono border border-gray-200 dark:border-gray-600" 
+          {...restProps}
+        >
+          {children}
+        </code>
       )
     }
-    // Block code
-    return <code className="font-mono text-sm" {...props} />
+    
+    // If it's in a code block, pass through with syntax highlighting classes
+    return <code className={`${className} font-mono text-sm`} {...restProps}>{children}</code>
   },
 
   // Blockquotes
@@ -84,7 +105,12 @@ export const MDXComponents = {
 
   // Images
   img: (props: any) => (
-    <img className="max-w-full h-auto rounded-lg shadow-md mb-4" {...props} />
+    // eslint-disable-next-line @next/next/no-img-element
+    <img 
+      className="max-w-full h-auto rounded-lg shadow-md mb-4" 
+      alt={props.alt || ""} 
+      {...props} 
+    />
   ),
 
   // Horizontal rule

@@ -1,0 +1,234 @@
+/* Prism.js Code Highlighting Theme - VS Code Dark+ Inspired */
+
+/* Base styles for code blocks */
+.prose pre {
+  @apply overflow-x-auto rounded-lg border bg-gray-900 p-4 text-sm;
+}
+
+.prose code {
+  @apply rounded bg-gray-100 px-1.5 py-0.5 text-sm font-mono text-gray-800;
+}
+
+.prose pre code {
+  @apply bg-transparent p-0 text-gray-100;
+}
+
+/* Token styles */
+.token.comment,
+.token.prolog,
+.token.doctype,
+.token.cdata {
+  color: #6a737d;
+  font-style: italic;
+}
+
+.token.namespace {
+  opacity: 0.7;
+}
+
+.token.string,
+.token.attr-value {
+  color: #98c379;
+}
+
+.token.punctuation,
+.token.operator {
+  color: #56b6c2;
+}
+
+.token.entity,
+.token.url,
+.language-css .token.string,
+.style .token.string,
+.token.variable {
+  color: #f8f8f2;
+}
+
+.token.atrule,
+.token.attr-name,
+.token.keyword {
+  color: #c678dd;
+  font-weight: 500;
+}
+
+.token.function,
+.token.class-name {
+  color: #61dafb;
+}
+
+.token.regex,
+.token.important {
+  color: #e06c75;
+}
+
+.token.number,
+.token.boolean {
+  color: #d19a66;
+}
+
+.token.tag {
+  color: #e06c75;
+}
+
+.token.selector {
+  color: #98c379;
+}
+
+.token.property {
+  color: #56b6c2;
+}
+
+.token.attr-name {
+  color: #f92672;
+}
+
+.token.builtin {
+  color: #66d9ef;
+}
+
+.token.char {
+  color: #a6e22e;
+}
+
+.token.inserted {
+  color: #a6e22e;
+  background-color: rgba(166, 226, 46, 0.1);
+}
+
+.token.deleted {
+  color: #f92672;
+  background-color: rgba(249, 38, 114, 0.1);
+}
+
+.token.italic {
+  font-style: italic;
+}
+
+.token.important,
+.token.bold {
+  font-weight: bold;
+}
+
+.token.important {
+  color: #f92672;
+}
+
+/* Line highlighting */
+.code-highlight {
+  float: left;
+  min-width: 100%;
+}
+
+.code-line {
+  display: block;
+  padding-left: 16px;
+  padding-right: 16px;
+  margin-left: -16px;
+  margin-right: -16px;
+  border-left: 4px solid transparent;
+}
+
+.code-line.inserted {
+  background-color: rgba(16, 185, 129, 0.2);
+}
+
+.code-line.deleted {
+  background-color: rgba(239, 68, 68, 0.2);
+}
+
+.highlight-line {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-left: 4px solid #f59e0b;
+}
+
+/* Line numbers */
+.line-number::before {
+  content: attr(line);
+  color: #6b7280;
+  display: inline-block;
+  text-align: right;
+  padding-right: 16px;
+  margin-right: 16px;
+  width: 32px;
+  border-right: 1px solid #374151;
+}
+
+/* Language badge */
+.code-block {
+  position: relative;
+}
+
+.code-block::before {
+  content: attr(data-language);
+  position: absolute;
+  top: 8px;
+  right: 12px;
+  color: #9ca3af;
+  font-size: 12px;
+  font-weight: 500;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Copy button styling */
+.copy-button {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  background: rgba(55, 65, 81, 0.8);
+  border: 1px solid rgba(75, 85, 99, 0.5);
+  color: #d1d5db;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.2s ease;
+}
+
+.code-block:hover .copy-button {
+  opacity: 1;
+}
+
+.copy-button:hover {
+  background: rgba(75, 85, 99, 0.8);
+  color: #f3f4f6;
+}
+
+/* Inline code in different contexts */
+.prose h1 code,
+.prose h2 code,
+.prose h3 code,
+.prose h4 code,
+.prose h5 code,
+.prose h6 code {
+  @apply bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200;
+}
+
+/* Dark mode adjustments */
+.dark .prose code {
+  @apply bg-gray-800 text-gray-200;
+}
+
+.dark .prose pre {
+  @apply bg-gray-800 border-gray-700;
+}
+
+/* Scrollbar styling for code blocks */
+.prose pre::-webkit-scrollbar {
+  height: 8px;
+}
+
+.prose pre::-webkit-scrollbar-track {
+  background: rgba(55, 65, 81, 0.5);
+  border-radius: 4px;
+}
+
+.prose pre::-webkit-scrollbar-thumb {
+  background: rgba(107, 114, 128, 0.8);
+  border-radius: 4px;
+}
+
+.prose pre::-webkit-scrollbar-thumb:hover {
+  background: rgba(156, 163, 175, 0.8);
+}

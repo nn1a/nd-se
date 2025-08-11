@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import RichTextEditor from '../../../components/RichTextEditor';
+import TiptapEditorWrapper from '../../../components/TiptapEditorWrapper';
 import { useAuth } from '../../../hooks/useAuth';
 
 export default function NewForumPostPage() {
@@ -195,15 +195,16 @@ export default function NewForumPostPage() {
           <label className="block text-sm font-medium text-gray-700 mb-2">
             내용 *
           </label>
-          <RichTextEditor
+          <TiptapEditorWrapper
             initialContent={formData.content}
             onChange={handleContentChange}
             onSave={handleSave}
             placeholder="게시글 내용을 입력하세요. 이미지 업로드와 파일 첨부가 가능합니다."
-            className="min-h-[400px]"
+            className=""
             showPreview={true}
             autosave={true}
             autosaveInterval={30000}
+            height={400}
           />
         </div>
 

@@ -7,7 +7,7 @@ from datetime import datetime, timedelta
 import os
 import json
 
-from .routers import docs, blog, forum, dashboard, auth, analytics, users, search, upload
+from .routers import docs, blog, forum, dashboard, auth, analytics, users, search, upload, webhook, dummy_oidc
 from .core.config import settings
 from .core.database import database
 from .core.auth import get_current_user
@@ -37,6 +37,11 @@ app.include_router(analytics.router, prefix="/api/analytics", tags=["analytics"]
 app.include_router(users.router, prefix="/api/users", tags=["users"])
 app.include_router(search.router, prefix="/api/search", tags=["search"])
 app.include_router(upload.router, prefix="/api/upload", tags=["upload"])
+app.include_router(webhook.router, prefix="/api/webhook", tags=["webhook"])
+
+# 개발용 더미 OIDC 프로바이더 (개발 환경에서만 활성화)
+if settings.ENVIRONMENT == "development":
+    app.include_router(dummy_oidc.router, prefix="/dummy-oidc", tags=["dummy-oidc"])
 
 @app.on_event("startup")
 async def startup_event():

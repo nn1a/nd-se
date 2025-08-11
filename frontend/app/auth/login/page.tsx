@@ -4,10 +4,12 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useAuth } from '../../../hooks/useAuth';
+import { useOIDC } from '../../../hooks/useOIDC';
 
 export default function LoginPage() {
   const router = useRouter();
   const { login, user, isLoading } = useAuth();
+  const { oidcStatus, startOIDCLogin, isLoading: oidcLoading, error: oidcError } = useOIDC();
   
   const [formData, setFormData] = useState({
     username: '',
@@ -86,9 +88,43 @@ export default function LoginPage() {
         </div>
         
         <div className="bg-white py-8 px-6 shadow-md rounded-lg">
-          {error && (
+          {(error || oidcError) && (
             <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
-              {error}
+              {error || oidcError}
+            </div>
+          )}
+
+          {/* SSO 로그인 버튼 (OIDC 활성화된 경우) */}
+          {oidcStatus.enabled && oidcStatus.configured && (
+            <div className="mb-6">
+              <button
+                onClick={startOIDCLogin}
+                disabled={oidcLoading || isSubmitting}
+                className="w-full flex justify-center items-center py-3 px-4 border border-gray-300 rounded-md shadow-sm bg-white text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {oidcLoading ? (
+                  <div className="flex items-center">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-gray-600 mr-2"></div>
+                    SSO 로그인 중...
+                  </div>
+                ) : (
+                  <>
+                    <svg className="w-5 h-5 mr-2" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 011 1v2a1 1 0 01-2 0V5H5v10h10v-1a1 1 0 112 0v2a1 1 0 01-1 1H4a1 1 0 01-1-1V4zm7.707 3.293a1 1 0 010 1.414L9.414 10H17a1 1 0 110 2H9.414l1.293 1.293a1 1 0 11-1.414 1.414l-3-3a1 1 0 010-1.414l3-3a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    SSO로 로그인
+                  </>
+                )}
+              </button>
+              
+              <div className="mt-4 relative">
+                <div className="absolute inset-0 flex items-center">
+                  <div className="w-full border-t border-gray-300" />
+                </div>
+                <div className="relative flex justify-center text-sm">
+                  <span className="px-2 bg-white text-gray-500">또는</span>
+                </div>
+              </div>
             </div>
           )}
 

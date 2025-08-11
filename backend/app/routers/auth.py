@@ -1,5 +1,6 @@
-from fastapi import APIRouter, HTTPException, status, Depends
+from fastapi import APIRouter, HTTPException, status, Depends, Request
 from fastapi.security import OAuth2PasswordRequestForm
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel, EmailStr
 from typing import Optional
 from datetime import datetime
@@ -14,6 +15,8 @@ from ..core.auth import (
     get_current_user
 )
 from ..core.database import database
+from ..core.oidc import oidc_auth
+from ..core.config import settings
 
 router = APIRouter()
 
@@ -75,6 +78,18 @@ class User(BaseModel):
     is_active: bool = True
     created_at: str
     updated_at: Optional[str] = None
+
+class OIDCAuthUrl(BaseModel):
+    authorization_url: str
+    state: str
+
+class OIDCCallback(BaseModel):
+    code: str
+    state: str
+
+class OIDCAuthResponse(BaseModel):
+    user: User
+    tokens: Token
 
 @router.post("/token", response_model=Token)
 async def login(form_data: OAuth2PasswordRequestForm = Depends()):
@@ -271,3 +286,73 @@ async def change_password(
 async def logout(current_user: dict = Depends(get_current_user)):
     """로그아웃 (토큰 무효화 - 실제로는 클라이언트에서 토큰 삭제)"""
     return {"message": "Logged out successfully"}
+
+# OIDC/SSO 엔드포인트
+@router.get("/oidc/login", response_model=OIDCAuthUrl)
+async def oidc_login(request: Request):
+    """OIDC 로그인 시작 - 인증 제공자로 리다이렉트할 URL 반환"""
+    if not settings.OIDC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="OIDC authentication is not enabled"
+        )
+    
+    auth_data = await oidc_auth.get_authorization_url()
+    return OIDCAuthUrl(**auth_data)
+
+@router.get("/oidc/callback")
+async def oidc_callback(request: Request, code: str, state: str):
+    """OIDC 콜백 처리 - 인증 완료 후 토큰 발급"""
+    if not settings.OIDC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="OIDC authentication is not enabled"
+        )
+    
+    try:
+        result = await oidc_auth.handle_callback(code, state)
+        
+        # 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
+        frontend_redirect_url = f"{settings.FRONTEND_URL}/auth/callback?access_token={result['tokens']['access_token']}&refresh_token={result['tokens']['refresh_token']}"
+        
+        return RedirectResponse(url=frontend_redirect_url)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # 에러 발생 시 프론트엔드 에러 페이지로 리다이렉트
+        error_url = f"{settings.FRONTEND_URL}/auth/error?message={str(e)}"
+        return RedirectResponse(url=error_url)
+
+@router.post("/oidc/callback")
+async def oidc_callback_post(request: Request, code: str, state: str):
+    """OIDC 콜백 처리 (POST 방식) - 브라우저 리다이렉트용"""
+    if not settings.OIDC_ENABLED:
+        raise HTTPException(
+            status_code=status.HTTP_501_NOT_IMPLEMENTED,
+            detail="OIDC authentication is not enabled"
+        )
+    
+    try:
+        print(f"OIDC POST callback received: code={code[:10]}..., state={state[:10]}...")
+        result = await oidc_auth.handle_callback(code, state)
+        
+        # 프론트엔드로 리다이렉트 (토큰을 쿼리 파라미터로 전달)
+        frontend_redirect_url = f"{settings.FRONTEND_URL}/auth/callback?access_token={result['tokens']['access_token']}&refresh_token={result['tokens']['refresh_token']}"
+        
+        return RedirectResponse(url=frontend_redirect_url)
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        # 에러 발생 시 프론트엔드 에러 페이지로 리다이렉트
+        error_url = f"{settings.FRONTEND_URL}/auth/error?message={str(e)}"
+        return RedirectResponse(url=error_url)
+
+@router.get("/oidc/status")
+async def oidc_status():
+    """OIDC 설정 상태 확인"""
+    return {
+        "enabled": settings.OIDC_ENABLED,
+        "configured": bool(settings.OIDC_CLIENT_ID and settings.OIDC_CLIENT_SECRET and settings.OIDC_DISCOVERY_URL)
+    }

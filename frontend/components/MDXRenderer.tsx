@@ -3,10 +3,9 @@
 import React, { useEffect, useState } from 'react'
 import { MDXRemote, MDXRemoteSerializeResult } from 'next-mdx-remote'
 import { serialize } from 'next-mdx-remote/serialize'
-import remarkGfm from 'remark-gfm'
 import remarkFrontmatter from 'remark-frontmatter'
 import rehypeSlug from 'rehype-slug'
-import rehypeHighlight from 'rehype-highlight'
+import rehypePrismPlus from 'rehype-prism-plus'
 import { components } from './MDXComponents'
 
 interface MDXRendererProps {
@@ -44,14 +43,47 @@ ${content.trim()}
           }
         )
 
-        const mdxSource = await serialize(processedContent, {
-          mdxOptions: {
-            remarkPlugins: [remarkGfm as any, remarkFrontmatter as any],
-            rehypePlugins: [rehypeSlug as any, rehypeHighlight as any],
-            development: process.env.NODE_ENV === 'development'
-          },
-          parseFrontmatter: false,
-        })
+        // Try with GFM first
+        let mdxSource
+        try {
+          const remarkGfm = (await import('remark-gfm')).default
+          mdxSource = await serialize(processedContent, {
+            mdxOptions: {
+              remarkPlugins: [
+                [remarkGfm, { singleTilde: false }],
+                remarkFrontmatter as any
+              ],
+              rehypePlugins: [
+                rehypeSlug as any,
+                [rehypePrismPlus as any, {
+                  ignoreMissing: true,
+                  showLineNumbers: true
+                }]
+              ],
+              development: process.env.NODE_ENV === 'development',
+              format: 'mdx'
+            },
+            parseFrontmatter: false,
+          })
+        } catch (gfmError) {
+          console.warn('Failed to use remark-gfm, falling back without GFM:', gfmError)
+          // Fallback without GFM
+          mdxSource = await serialize(processedContent, {
+            mdxOptions: {
+              remarkPlugins: [remarkFrontmatter],
+              rehypePlugins: [
+                rehypeSlug as any,
+                [rehypePrismPlus as any, {
+                  ignoreMissing: true,
+                  showLineNumbers: true
+                }]
+              ],
+              development: process.env.NODE_ENV === 'development',
+              format: 'mdx'
+            },
+            parseFrontmatter: false,
+          })
+        }
 
         setMdxSource(mdxSource)
       } catch (err) {
