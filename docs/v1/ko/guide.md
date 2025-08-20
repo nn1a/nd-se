@@ -1,16 +1,16 @@
 ---
 title: "개발 가이드"
-description: "ND-SE 시스템 개발 방법"
+description: "NDASH 시스템 개발 방법"
 ---
 
 # 개발 가이드
 
-이 가이드는 ND-SE 시스템을 개발하고 커스터마이징하는 방법을 설명합니다.
+이 가이드는 NDASH 시스템을 개발하고 커스터마이징하는 방법을 설명합니다.
 
 ## 프로젝트 구조
 
 ```
-nd-se/
+ndash/
 ├── frontend/          # Next.js 프론트엔드
 │   ├── app/          # App Router 페이지
 │   ├── components/   # 재사용 가능한 컴포넌트
@@ -119,11 +119,11 @@ uvicorn app.main:app --reload
 ```bash
 # 프론트엔드 빌드
 cd frontend
-docker build -t nd-se-frontend .
+docker build -t ndash-frontend .
 
 # 백엔드 빌드
 cd backend
-docker build -t nd-se-backend .
+docker build -t ndash-backend .
 
 # Docker Compose로 실행
 docker-compose up -d

@@ -14,7 +14,7 @@ interface OIDCStatus {
 }
 
 export function useOIDC() {
-  const { setTokens } = useAuth();
+  const { refetch } = useAuth();
   const [oidcStatus, setOidcStatus] = useState<OIDCStatus>({ enabled: false, configured: false });
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +26,15 @@ export function useOIDC() {
 
   const checkOIDCStatus = async () => {
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc/status`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      console.log('OIDC Status Check - API URL:', apiUrl);
+      
+      if (!apiUrl) {
+        console.error('NEXT_PUBLIC_API_URL is not defined');
+        return;
+      }
+      
+      const response = await fetch(`${apiUrl}/auth/oidc/status`);
       if (response.ok) {
         const status = await response.json();
         setOidcStatus(status);
@@ -46,7 +54,14 @@ export function useOIDC() {
     setError(null);
 
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc/login`);
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      console.log('OIDC Login - API URL:', apiUrl);
+      
+      if (!apiUrl) {
+        throw new Error('API URL is not configured');
+      }
+      
+      const response = await fetch(`${apiUrl}/auth/oidc/login`);
       
       if (!response.ok) {
         throw new Error('Failed to initiate OIDC login');
@@ -77,7 +92,14 @@ export function useOIDC() {
         throw new Error('Invalid state parameter');
       }
 
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/oidc/callback`, {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+      console.log('OIDC Callback - API URL:', apiUrl);
+      
+      if (!apiUrl) {
+        throw new Error('API URL is not configured');
+      }
+
+      const response = await fetch(`${apiUrl}/auth/oidc/callback`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -92,8 +114,8 @@ export function useOIDC() {
 
       const data = await response.json();
       
-      // 토큰 저장
-      setTokens(data.tokens.access_token, data.tokens.refresh_token);
+      // 사용자 정보 새로고침 (토큰은 이미 HttpOnly 쿠키로 설정됨)
+      refetch();
       
       // state 정리
       localStorage.removeItem('oidc_state');

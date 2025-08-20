@@ -1,11 +1,17 @@
-from fastapi import APIRouter, HTTPException, Query
-from fastapi.responses import Response
-from typing import List, Optional
-from datetime import datetime
-from pydantic import BaseModel
 import xml.etree.ElementTree as ET
+from datetime import datetime
+from typing import Any, Dict, List, Optional
+
+from bson import ObjectId
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import PlainTextResponse, Response
+from pydantic import BaseModel
+
+from ..core.auth import get_current_user, get_current_user_optional
+from ..core.database import database
 
 router = APIRouter()
+
 
 class BlogPost(BaseModel):
     id: str
@@ -22,6 +28,7 @@ class BlogPost(BaseModel):
     reading_time: Optional[int] = None
     views: int = 0
 
+
 class BlogPostCreate(BaseModel):
     title: str
     content: str
@@ -31,69 +38,6 @@ class BlogPostCreate(BaseModel):
     slug: Optional[str] = None
     excerpt: Optional[str] = None
 
-# Mock data with enhanced fields
-mock_blog_posts = [
-    {
-        "id": "1",
-        "title": "Next.js 15의 새로운 기능들",
-        "content": "Next.js 15에서 도입된 새로운 기능들에 대해 알아보겠습니다. App Router의 개선사항, Server Components의 향상된 성능, 그리고 새로운 개발자 도구들에 대해 자세히 살펴보겠습니다...",
-        "author": "개발자",
-        "created_at": "2024-01-15T10:00:00Z",
-        "updated_at": "2024-01-15T10:00:00Z",
-        "tags": ["nextjs", "react", "frontend"],
-        "categories": ["프론트엔드", "튜토리얼"],
-        "published": True,
-        "slug": "nextjs-15-new-features",
-        "excerpt": "Next.js 15에서 도입된 새로운 기능들과 개선사항들을 살펴봅니다.",
-        "reading_time": 5,
-        "views": 142
-    },
-    {
-        "id": "2", 
-        "title": "FastAPI와 Python으로 백엔드 개발하기",
-        "content": "FastAPI를 사용한 현대적인 Python 백엔드 개발 방법을 소개합니다. 비동기 프로그래밍, 자동 API 문서화, 타입 힌트 활용법 등을 다룹니다...",
-        "author": "백엔드 개발자",
-        "created_at": "2024-01-14T09:00:00Z",
-        "updated_at": "2024-01-14T09:00:00Z",
-        "tags": ["fastapi", "python", "backend"],
-        "categories": ["백엔드", "가이드"],
-        "published": True,
-        "slug": "fastapi-python-backend-development",
-        "excerpt": "FastAPI를 활용한 현대적인 Python 백엔드 개발 방법론을 알아봅니다.",
-        "reading_time": 8,
-        "views": 256
-    },
-    {
-        "id": "3",
-        "title": "React Query를 활용한 상태 관리",
-        "content": "React Query를 사용하여 서버 상태를 효율적으로 관리하는 방법을 알아봅시다. 캐싱 전략, 낙관적 업데이트, 에러 처리 방법 등을 다룹니다...",
-        "author": "프론트엔드 개발자",
-        "created_at": "2024-01-13T14:30:00Z",
-        "updated_at": "2024-01-13T14:30:00Z",
-        "tags": ["react", "react-query", "state-management"],
-        "categories": ["프론트엔드", "상태관리"],
-        "published": True,
-        "slug": "react-query-state-management",
-        "excerpt": "React Query를 사용한 효율적인 서버 상태 관리 방법을 살펴봅니다.",
-        "reading_time": 7,
-        "views": 189
-    },
-    {
-        "id": "4",
-        "title": "TypeScript 모범 사례",
-        "content": "TypeScript를 효과적으로 사용하기 위한 모범 사례들을 정리했습니다. 타입 정의, 제네릭 활용, 유틸리티 타입 등을 다룹니다...",
-        "author": "시니어 개발자",
-        "created_at": "2024-01-12T16:20:00Z",
-        "updated_at": "2024-01-12T16:20:00Z",
-        "tags": ["typescript", "javascript", "best-practices"],
-        "categories": ["프로그래밍", "모범사례"],
-        "published": True,
-        "slug": "typescript-best-practices",
-        "excerpt": "TypeScript를 더 효과적으로 사용하기 위한 실무 중심의 모범 사례들을 소개합니다.",
-        "reading_time": 10,
-        "views": 324
-    }
-]
 
 @router.get("/posts", response_model=List[BlogPost])
 async def get_blog_posts(
@@ -102,149 +46,345 @@ async def get_blog_posts(
     published: Optional[bool] = None,
     tag: Optional[str] = Query(None, description="태그로 필터링"),
     category: Optional[str] = Query(None, description="카테고리로 필터링"),
-    sort_by: str = Query("created_at", description="정렬 기준: created_at, views, title"),
-    order: str = Query("desc", description="정렬 순서: asc, desc")
+    sort_by: str = Query(
+        "created_at", description="정렬 기준: created_at, views, title"
+    ),
+    order: str = Query("desc", description="정렬 순서: asc, desc"),
+    include_private: bool = Query(False, description="비공개 글 포함 여부"),
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional),
 ):
-    """블로그 포스트 목록 조회 (태그/카테고리 필터링 및 정렬 지원)"""
-    posts = mock_blog_posts.copy()
-    
-    # 필터링
-    if published is not None:
-        posts = [p for p in posts if p["published"] == published]
-    
-    if tag:
-        posts = [p for p in posts if tag.lower() in [t.lower() for t in p["tags"]]]
-    
-    if category:
-        posts = [p for p in posts if category in p["categories"]]
-    
-    # 정렬
-    reverse_order = order.lower() == "desc"
-    if sort_by == "created_at":
-        posts = sorted(posts, key=lambda x: x["created_at"], reverse=reverse_order)
-    elif sort_by == "views":
-        posts = sorted(posts, key=lambda x: x["views"], reverse=reverse_order)
-    elif sort_by == "title":
-        posts = sorted(posts, key=lambda x: x["title"], reverse=reverse_order)
-    
-    return posts[skip:skip + limit]
+    """블로그 포스트 목록 조회 (태그/카테고리 필터링 및 정렬 지원, 권한별 접근 제어)"""
+
+    try:
+        collection = database.get_collection("blog_posts")
+
+        # 권한별 필터링을 위한 쿼리 조건 구성
+        user_role = current_user.get("role", "guest") if current_user else "guest"
+
+        query_filter = {}
+
+        # 접근 권한 필터링
+        if user_role == "guest":
+            query_filter["access_level"] = "public"
+        elif user_role == "user":
+            query_filter["access_level"] = {"$in": ["public", "user"]}
+        elif user_role == "moderator":
+            query_filter["access_level"] = {"$in": ["public", "user", "moderator"]}
+        # admin은 모든 글 접근 가능
+
+        # published 필터링
+        if published is not None:
+            if not published and not current_user:
+                # 비공개 글을 요청했지만 인증되지 않은 경우
+                return []
+            else:
+                query_filter["published"] = published
+        else:
+            # 기본적으로는 게시된 글만 표시 (인증된 사용자가 include_private=true로 요청한 경우 제외)
+            if not include_private or not current_user:
+                query_filter["published"] = True
+
+        # 태그 및 카테고리 필터링
+        if tag:
+            query_filter["tags"] = {"$in": [tag]}
+
+        if category:
+            query_filter["categories"] = {"$in": [category]}
+
+        # 정렬 설정
+        sort_order = 1 if order.lower() == "asc" else -1
+        sort_criteria = [(sort_by, sort_order)]
+
+        # 데이터베이스에서 조회
+        cursor = (
+            collection.find(query_filter).sort(sort_criteria).skip(skip).limit(limit)
+        )
+        posts = await cursor.to_list(length=limit)
+
+        # _id를 id로 변환
+        for post in posts:
+            post["_id"] = str(post["_id"])
+            post["id"] = post["_id"]
+
+        # 로그 기록
+        user_info = (
+            f"user: {current_user.get('username')} ({user_role})"
+            if current_user
+            else "public"
+        )
+        print(f"📰 Blog posts access: {len(posts)} posts by {user_info}")
+
+        return [BlogPost(**post) for post in posts]
+
+    except Exception as e:
+        print(f"❌ [Blog] Error fetching blog posts: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch blog posts")
+
 
 @router.get("/posts/{post_id}", response_model=BlogPost)
-async def get_blog_post(post_id: str):
-    """특정 블로그 포스트 조회"""
-    for post in mock_blog_posts:
-        if post["id"] == post_id:
-            return post
-    raise HTTPException(status_code=404, detail="블로그 포스트를 찾을 수 없습니다")
+async def get_blog_post(
+    post_id: str,
+    current_user: Optional[Dict[str, Any]] = Depends(get_current_user_optional),
+):
+    """특정 블로그 포스트 조회 - 권한별 접근 제어"""
+
+    try:
+        collection = database.get_collection("blog_posts")
+
+        # ObjectId 또는 문자열 ID로 검색 시도
+        post = None
+        try:
+            if ObjectId.is_valid(post_id):
+                post = await collection.find_one({"_id": ObjectId(post_id)})
+            else:
+                post = await collection.find_one({"_id": post_id})
+        except Exception:
+            post = await collection.find_one({"_id": post_id})
+
+        if not post:
+            raise HTTPException(
+                status_code=404, detail="블로그 포스트를 찾을 수 없습니다"
+            )
+
+        # 권한별 접근 제어
+        access_level = post.get("access_level", "public")
+        user_role = current_user.get("role", "guest") if current_user else "guest"
+
+        # 접근 권한 체크
+        if access_level == "user" and not current_user:
+            raise HTTPException(status_code=401, detail="로그인이 필요합니다")
+        elif access_level == "moderator" and user_role not in ["admin", "moderator"]:
+            raise HTTPException(status_code=403, detail="운영자 권한이 필요합니다")
+        elif access_level == "admin" and user_role != "admin":
+            raise HTTPException(status_code=403, detail="관리자 권한이 필요합니다")
+
+        # 비공개 글 접근 제어
+        if not post.get("published", True):
+            if not current_user:
+                raise HTTPException(
+                    status_code=404, detail="블로그 포스트를 찾을 수 없습니다"
+                )
+            # 작성자나 관리자만 비공개 글 접근 가능
+            if post.get("author_id") != current_user.get(
+                "user_id"
+            ) and user_role not in ["admin", "moderator"]:
+                raise HTTPException(
+                    status_code=404, detail="블로그 포스트를 찾을 수 없습니다"
+                )
+
+        # _id를 id로 변환
+        post["_id"] = str(post["_id"])
+        post["id"] = post["_id"]
+
+        # 로그 기록
+        user_info = (
+            f"user: {current_user.get('username')} ({user_role})"
+            if current_user
+            else "public"
+        )
+        print(f"📖 Blog post access: {post['title']} by {user_info}")
+
+        return BlogPost(**post)
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        print(f"❌ [Blog] Error fetching blog post {post_id}: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch blog post")
+
 
 @router.post("/posts", response_model=BlogPost)
 async def create_blog_post(post: BlogPostCreate):
     """새 블로그 포스트 생성"""
-    new_post = {
-        "id": str(len(mock_blog_posts) + 1),
-        "title": post.title,
-        "content": post.content,
-        "author": "현재 사용자",  # TODO: 실제 인증된 사용자 정보 사용
-        "created_at": datetime.now().isoformat() + "Z",
-        "updated_at": datetime.now().isoformat() + "Z",
-        "tags": post.tags,
-        "published": post.published
-    }
-    mock_blog_posts.append(new_post)
-    return new_post
+    try:
+        collection = database.get_collection("blog_posts")
+
+        # 새 포스트 데이터 생성
+        new_post = {
+            "title": post.title,
+            "content": post.content,
+            "author": "현재 사용자",  # TODO: 실제 인증된 사용자 정보 사용
+            "created_at": datetime.now().isoformat() + "Z",
+            "updated_at": datetime.now().isoformat() + "Z",
+            "tags": post.tags,
+            "categories": post.categories,
+            "published": post.published,
+            "slug": post.slug or post.title.lower().replace(" ", "-"),
+            "excerpt": post.excerpt,
+            "reading_time": 5,  # TODO: 실제 계산
+            "views": 0,
+            "access_level": "public",
+        }
+
+        # 데이터베이스에 삽입
+        result = await collection.insert_one(new_post)
+        new_post["_id"] = str(result.inserted_id)
+        new_post["id"] = new_post["_id"]
+
+        return BlogPost(**new_post)
+
+    except Exception as e:
+        print(f"❌ [Blog] Error creating blog post: {e}")
+        raise HTTPException(status_code=500, detail="Failed to create blog post")
+
 
 @router.get("/tags")
 async def get_all_tags():
     """모든 태그 목록 조회"""
-    all_tags = set()
-    for post in mock_blog_posts:
-        all_tags.update(post["tags"])
-    
-    # 태그별 게시물 수 계산
-    tag_counts = {}
-    for tag in all_tags:
-        tag_counts[tag] = len([p for p in mock_blog_posts if tag in p["tags"]])
-    
-    return {
-        "tags": sorted(list(all_tags)),
-        "tag_counts": tag_counts
-    }
+    try:
+        collection = database.get_collection("blog_posts")
+
+        # 모든 게시물의 태그를 가져와서 중복 제거
+        posts = await collection.find({}, {"tags": 1}).to_list(length=None)
+        all_tags = set()
+        for post in posts:
+            all_tags.update(post.get("tags", []))
+
+        # 태그별 게시물 수 계산
+        tag_counts = {}
+        for tag in all_tags:
+            count = await collection.count_documents({"tags": {"$in": [tag]}})
+            tag_counts[tag] = count
+
+        return {"tags": sorted(list(all_tags)), "tag_counts": tag_counts}
+
+    except Exception as e:
+        print(f"❌ [Blog] Error fetching tags: {e}")
+        return {"tags": [], "tag_counts": {}}
+
 
 @router.get("/categories")
 async def get_all_categories():
     """모든 카테고리 목록 조회"""
-    all_categories = set()
-    for post in mock_blog_posts:
-        all_categories.update(post["categories"])
-    
-    # 카테고리별 게시물 수 계산
-    category_counts = {}
-    for category in all_categories:
-        category_counts[category] = len([p for p in mock_blog_posts if category in p["categories"]])
-    
-    return {
-        "categories": sorted(list(all_categories)),
-        "category_counts": category_counts
-    }
+    try:
+        collection = database.get_collection("blog_posts")
 
-@router.get("/rss")
-async def get_rss_feed():
-    """블로그 RSS 피드 제공"""
-    # RSS XML 생성
-    rss = ET.Element("rss", version="2.0")
-    channel = ET.SubElement(rss, "channel")
-    
-    # 채널 정보
-    ET.SubElement(channel, "title").text = "ND-SE 블로그"
-    ET.SubElement(channel, "description").text = "최신 개발 소식, 튜토리얼, 그리고 팁"
-    ET.SubElement(channel, "link").text = "http://localhost:3000/blog"
-    ET.SubElement(channel, "language").text = "ko-KR"
-    
-    # 최근 게시물 10개
-    recent_posts = sorted(mock_blog_posts, key=lambda x: x["created_at"], reverse=True)[:10]
-    
-    for post in recent_posts:
-        if post["published"]:
-            item = ET.SubElement(channel, "item")
-            ET.SubElement(item, "title").text = post["title"]
-            ET.SubElement(item, "description").text = post.get("excerpt", post["content"][:200] + "...")
-            ET.SubElement(item, "link").text = f"http://localhost:3000/blog/{post['slug']}"
-            ET.SubElement(item, "guid").text = f"http://localhost:3000/blog/{post['slug']}"
-            ET.SubElement(item, "pubDate").text = datetime.fromisoformat(post["created_at"].replace('Z', '+00:00')).strftime("%a, %d %b %Y %H:%M:%S %z")
-            ET.SubElement(item, "author").text = post["author"]
-            
-            # 태그를 카테고리로 추가
-            for tag in post["tags"]:
-                ET.SubElement(item, "category").text = tag
-    
-    # XML 문자열로 변환
-    xml_str = ET.tostring(rss, encoding="utf-8", method="xml")
-    xml_declaration = b'<?xml version="1.0" encoding="UTF-8"?>\n'
-    
-    return Response(
-        content=xml_declaration + xml_str,
-        media_type="application/rss+xml",
-        headers={"Content-Type": "application/rss+xml; charset=utf-8"}
-    )
+        # 모든 게시물의 카테고리를 가져와서 중복 제거
+        posts = await collection.find({}, {"categories": 1}).to_list(length=None)
+        all_categories = set()
+        for post in posts:
+            all_categories.update(post.get("categories", []))
+
+        # 카테고리별 게시물 수 계산
+        category_counts = {}
+        for category in all_categories:
+            count = await collection.count_documents(
+                {"categories": {"$in": [category]}}
+            )
+            category_counts[category] = count
+
+        return {
+            "categories": sorted(list(all_categories)),
+            "category_counts": category_counts,
+        }
+
+    except Exception as e:
+        print(f"❌ [Blog] Error fetching categories: {e}")
+        return {"categories": [], "category_counts": {}}
+
+
+@router.get("/rss", response_class=PlainTextResponse)
+async def get_blog_rss():
+    """블로그 RSS 피드 생성"""
+    try:
+        collection = database.get_collection("blog_posts")
+        recent_posts_cursor = collection.find(
+            {"published": True}, sort=[("created_at", -1)]
+        ).limit(10)
+        recent_posts = await recent_posts_cursor.to_list(length=10)
+
+        # RSS XML 생성
+        rss_items = []
+        for post in recent_posts:
+            rss_items.append(
+                f"""
+        <item>
+            <title>{post['title']}</title>
+            <description>{post.get('content', '')[:200]}...</description>
+            <link>http://localhost:3000/blog/{post['slug']}</link>
+            <pubDate>{post['created_at'].strftime(
+                '%a, %d %b %Y %H:%M:%S GMT'
+            )}</pubDate>
+            <guid>http://localhost:3000/blog/{post['slug']}</guid>
+        </item>"""
+            )
+
+        rss_xml = f"""<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>NDASH Blog</title>
+        <description>Latest blog posts from NDASH</description>
+        <link>http://localhost:3000/blog</link>
+        {''.join(rss_items)}
+    </channel>
+</rss>"""
+
+        return rss_xml
+
+    except Exception as e:
+        print(f"❌ [Blog] Error generating RSS feed: {e}")
+        return """<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0">
+    <channel>
+        <title>NDASH Blog</title>
+        <description>Latest blog posts from NDASH</description>
+        <link>http://localhost:3000/blog</link>
+    </channel>
+</rss>"""
+
 
 @router.get("/stats")
-async def get_blog_stats():
-    """블로그 통계 정보"""
-    total_posts = len(mock_blog_posts)
-    published_posts = len([p for p in mock_blog_posts if p["published"]])
-    
-    # 인기 태그 TOP 5
-    tag_counts = {}
-    for post in mock_blog_posts:
-        for tag in post["tags"]:
-            tag_counts[tag] = tag_counts.get(tag, 0) + 1
-    popular_tags = sorted(tag_counts.items(), key=lambda x: x[1], reverse=True)[:5]
-    
-    return {
-        "total_posts": total_posts,
-        "published_posts": published_posts,
-        "draft_posts": total_posts - published_posts,
-        "total_views": sum(p["views"] for p in mock_blog_posts),
-        "popular_tags": popular_tags,
-        "recent_posts": sorted(mock_blog_posts, key=lambda x: x["created_at"], reverse=True)[:5]
-    }
+async def get_blog_stats(current_user: dict = Depends(get_current_user_optional)):
+    """블로그 통계 정보 조회"""
+    try:
+        collection = database.get_collection("blog_posts")
+
+        # 기본 통계 계산
+        total_posts = await collection.count_documents({})
+        published_posts = await collection.count_documents({"published": True})
+        draft_posts = total_posts - published_posts
+
+        # 카테고리별 통계
+        category_stats = {}
+        posts_cursor = collection.find({}, {"categories": 1})
+        async for post in posts_cursor:
+            for category in post.get("categories", []):
+                category_stats[category] = category_stats.get(category, 0) + 1
+
+        # 최근 게시물 (5개)
+        recent_posts_cursor = collection.find(
+            {"published": True},
+            {"title": 1, "slug": 1, "created_at": 1},
+            sort=[("created_at", -1)],
+        ).limit(5)
+        recent_posts = await recent_posts_cursor.to_list(length=5)
+
+        # ObjectId를 문자열로 변환
+        for post in recent_posts:
+            post["id"] = str(post.pop("_id"))
+
+        # 총 조회수 계산 (views 필드가 있는 경우)
+        total_views = 0
+        views_cursor = collection.find({}, {"views": 1})
+        async for post in views_cursor:
+            total_views += post.get("views", 0)
+
+        return {
+            "total_posts": total_posts,
+            "published_posts": published_posts,
+            "draft_posts": draft_posts,
+            "total_views": total_views,
+            "category_stats": category_stats,
+            "recent_posts": recent_posts,
+        }
+
+    except Exception as e:
+        print(f"❌ [Blog] Error fetching blog stats: {e}")
+        return {
+            "total_posts": 0,
+            "published_posts": 0,
+            "draft_posts": 0,
+            "total_views": 0,
+            "category_stats": {},
+            "recent_posts": [],
+        }

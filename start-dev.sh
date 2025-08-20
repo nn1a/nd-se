@@ -1,14 +1,14 @@
 #!/bin/bash
 
-# ND-SE 개발 서버 시작 스크립트
+# NDASH 개발 서버 시작 스크립트
 
-echo "🚀 ND-SE 시스템을 시작합니다..."
+echo "🚀 NDASH 시스템을 시작합니다..."
 
 # MongoDB 확인 및 시작 (Docker 사용)
 echo "📦 MongoDB 컨테이너 확인 중..."
-if ! docker ps | grep -q "nd-se-mongodb"; then
+if ! docker ps | grep -q "ndash-mongodb"; then
     echo "🔧 MongoDB 컨테이너를 시작합니다..."
-    docker run -d --name nd-se-mongodb -p 27017:27017 mongo:7
+    docker run -d --name ndash-mongodb -p 27017:27017 mongo:7
     echo "⏳ MongoDB 초기화 대기 중..."
     sleep 5
 fi
@@ -60,7 +60,7 @@ FRONTEND_PID=$!
 cd ..
 
 echo ""
-echo "✅ ND-SE 시스템이 시작되었습니다!"
+echo "✅ NDASH 시스템이 시작되었습니다!"
 echo ""
 echo "🌐 서비스 URL:"
 echo "   - Frontend: http://localhost:3000"

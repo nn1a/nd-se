@@ -58,8 +58,8 @@ Follow these steps to get started:
 ### Step 1: Clone Repository
 
 ```bash
-git clone https://github.com/your-org/nd-se-platform.git
-cd nd-se-platform
+git clone https://github.com/your-org/ndash-platform.git
+cd ndash-platform
 ```
 
 ### Step 2: Install Dependencies
@@ -81,7 +81,7 @@ Create environment files for both frontend and backend:
 ```bash
 # Frontend .env.local
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_NAME="ND-SE Platform"
+NEXT_PUBLIC_APP_NAME="NDASH Platform"
 
 # Backend .env
 MONGODB_URL=mongodb://localhost:27017
@@ -188,8 +188,8 @@ This script will:
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/nd-se-platform.git
-cd nd-se-platform/frontend
+git clone https://github.com/your-org/ndash-platform.git
+cd ndash-platform/frontend
 
 # Install dependencies
 npm install
@@ -236,8 +236,8 @@ For containerized deployment:
 
 ```bash
 # Clone repository
-git clone https://github.com/your-org/nd-se-platform.git
-cd nd-se-platform
+git clone https://github.com/your-org/ndash-platform.git
+cd ndash-platform
 
 # Start with Docker Compose
 docker-compose up -d
@@ -252,7 +252,7 @@ docker-compose up -d
 ```env
 # .env.local
 NEXT_PUBLIC_API_URL=http://localhost:8000
-NEXT_PUBLIC_APP_NAME="ND-SE Platform"
+NEXT_PUBLIC_APP_NAME="NDASH Platform"
 NEXT_PUBLIC_ENVIRONMENT=development
 NEXT_PUBLIC_VERSION=1.0.0
 ```
@@ -728,7 +728,7 @@ All API requests require authentication via JWT tokens.
 ### Get Access Token
 
 ```http
-POST /auth/login
+POST /login
 Content-Type: application/json
 
 {
@@ -1126,11 +1126,11 @@ Content-Type: application/json
 ### JavaScript/TypeScript
 
 ```bash
-npm install nd-se-sdk
+npm install ndash-sdk
 ```
 
 ```javascript
-import { NDSEClient } from 'nd-se-sdk';
+import { NDSEClient } from 'ndash-sdk';
 
 const client = new NDSEClient({
   apiUrl: 'http://localhost:8000',
@@ -1150,7 +1150,7 @@ const newDoc = await client.documents.create({
 ### Python
 
 ```bash
-pip install nd-se-python
+pip install ndash-python
 ```
 
 ```python

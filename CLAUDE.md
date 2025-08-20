@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Architecture Overview
 
-ND-SE is a modern full-stack documentation platform combining **Next.js 15 frontend** with **FastAPI backend**, using **MongoDB** as the database. The system provides documentation, blog, forum, and dashboard features with auto-generated TypeScript API clients.
+NDASH is a modern full-stack documentation platform combining **Next.js 15 frontend** with **FastAPI backend**, using **MongoDB** as the database. The system provides documentation, blog, forum, and dashboard features with auto-generated TypeScript API clients.
 
 ### Key Technologies
 - **Frontend**: Next.js 15 (App Router), TypeScript, TailwindCSS v4+, Shadcn UI, TanStack Query
@@ -18,7 +18,7 @@ ND-SE is a modern full-stack documentation platform combining **Next.js 15 front
 ```bash
 cd backend
 source venv/bin/activate
-PYTHONPATH=/home/meakd/nd-se/backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=/home/meakd/ndash/backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### Frontend Development

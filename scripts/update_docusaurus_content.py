@@ -46,8 +46,8 @@ Follow these steps to get started:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/nd-se.git
-cd nd-se
+git clone https://github.com/your-org/ndash.git
+cd ndash
 ```
 
 ### 2. Install Dependencies
@@ -123,7 +123,7 @@ Make sure to follow security best practices when deploying to production. Never 
 
 Need help? Join our community:
 - 💬 [Discord Server](https://discord.gg/example)
-- 🐛 [GitHub Issues](https://github.com/your-org/nd-se/issues)
+- 🐛 [GitHub Issues](https://github.com/your-org/ndash/issues)
 - 📧 [Email Support](mailto:support@example.com)
 """,
                 "updated_at": datetime.utcnow()

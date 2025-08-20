@@ -99,7 +99,7 @@ export default function DocsIndexPage() {
           📚 문서 시스템
         </h1>
         <p className="text-xl text-gray-600 max-w-3xl mx-auto">
-          ND-SE 플랫폼의 완전한 가이드, API 참조, 튜토리얼을 찾아보세요.
+          NDASH 플랫폼의 완전한 가이드, API 참조, 튜토리얼을 찾아보세요.
         </p>
       </div>
 

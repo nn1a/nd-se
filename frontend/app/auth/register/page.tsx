@@ -64,7 +64,7 @@ export default function RegisterPage() {
 
       setSuccess(true);
       setTimeout(() => {
-        router.push('/auth/login');
+        router.push('/login');
       }, 2000);
     } catch (err: any) {
       setError(err.message || '회원가입에 실패했습니다.');
@@ -99,7 +99,7 @@ export default function RegisterPage() {
               계정이 성공적으로 생성되었습니다. 로그인 페이지로 이동합니다...
             </p>
             <Link 
-              href="/auth/login"
+              href="/login"
               className="text-blue-600 hover:text-blue-500 font-medium"
             >
               지금 로그인하기
@@ -120,7 +120,7 @@ export default function RegisterPage() {
           <p className="mt-2 text-center text-sm text-gray-600">
             이미 계정이 있으신가요?{' '}
             <Link 
-              href="/auth/login" 
+              href="/login" 
               className="font-medium text-blue-600 hover:text-blue-500"
             >
               로그인하기

@@ -2,12 +2,14 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useQueryClient } from '@tanstack/react-query';
 import Link from 'next/link';
 import TiptapEditorWrapper from '../../../components/TiptapEditorWrapper';
 import { useAuth } from '../../../hooks/useAuth';
 
 export default function NewForumPostPage() {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, isLoading: authLoading } = useAuth();
   
   const [formData, setFormData] = useState({
@@ -54,6 +56,9 @@ export default function NewForumPostPage() {
 
       const result = await response.json();
 
+      // React Query 캐시 무효화 - 정확한 queryKey 사용
+      queryClient.invalidateQueries({ queryKey: ['getForumPostsApiForumGet'] });
+
       if (isDraft) {
         alert('임시저장되었습니다.');
         router.push('/forum/drafts');
@@ -97,7 +102,7 @@ export default function NewForumPostPage() {
             게시글을 작성하려면 로그인해주세요.
           </p>
           <Link
-            href="/auth/login"
+            href="/login"
             className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
           >
             로그인하러 가기

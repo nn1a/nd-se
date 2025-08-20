@@ -1,9 +1,9 @@
 ---
 title: "시작하기"
-description: "ND-SE 문서 시스템 소개"
+description: "NDASH 문서 시스템 소개"
 ---
 
-# ND-SE 문서 시스템에 오신 것을 환영합니다
+# NDASH 문서 시스템에 오신 것을 환영합니다
 
 이 문서 시스템은 Next.js와 FastAPI를 기반으로 구축된 현대적인 통합 플랫폼입니다.
 

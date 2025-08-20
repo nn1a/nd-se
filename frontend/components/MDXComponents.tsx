@@ -50,17 +50,14 @@ export const MDXComponents = {
   // Code blocks
   pre: (props: any) => {
     const { children, className, ...restProps } = props
-    const language = className?.replace(/language-/, '') || 'text'
     
     return (
-      <CodeBlock 
-        className={className}
-        language={language}
-        showLineNumbers={false}
-        {...restProps}
-      >
-        {children}
-      </CodeBlock>
+        <pre 
+          className="bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm rounded-lg border border-gray-300" 
+          {...restProps}
+        >
+          {children}
+        </pre>
     )
   },
   code: (props: any) => {
@@ -156,34 +153,6 @@ export const Alert = ({
       <div className="prose prose-sm max-w-none [&>*:last-child]:mb-0">
         {children}
       </div>
-    </div>
-  )
-}
-
-export const CodeBlock = ({ 
-  language, 
-  title, 
-  children 
-}: { 
-  language?: string
-  title?: string
-  children: React.ReactNode 
-}) => {
-  return (
-    <div className="mb-6 rounded-lg overflow-hidden border border-gray-300 shadow-sm">
-      {title && (
-        <div className="bg-gray-100 border-b border-gray-300 px-4 py-3 flex items-center justify-between">
-          <span className="text-sm font-mono font-semibold text-gray-800">{title}</span>
-          {language && (
-            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded-md font-mono">
-              {language}
-            </span>
-          )}
-        </div>
-      )}
-      <pre className={`bg-gray-900 text-gray-100 p-4 overflow-x-auto text-sm m-0 font-mono leading-relaxed ${title ? '' : 'rounded-lg'}`}>
-        <code className={language ? `language-${language}` : ''}>{children}</code>
-      </pre>
     </div>
   )
 }

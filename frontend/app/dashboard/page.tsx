@@ -42,7 +42,7 @@ export default function DashboardPage() {
           대시보드 개요
         </h1>
         <p className="text-gray-600 dark:text-gray-400">
-          ND-SE 시스템의 전반적인 상태와 주요 지표를 확인하세요.
+          NDASH 시스템의 전반적인 상태와 주요 지표를 확인하세요.
         </p>
       </div>
 

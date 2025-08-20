@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useQuery, useMutation } from '@tanstack/react-query';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import TiptapEditorWrapper from '../../../../components/TiptapEditorWrapper';
 import { useAuth } from '../../../../hooks/useAuth';
 
@@ -15,6 +15,7 @@ interface EditForumPostPageProps {
 
 export default function EditForumPostPage({ params }: EditForumPostPageProps) {
   const router = useRouter();
+  const queryClient = useQueryClient();
   const { user, isLoading: authLoading } = useAuth();
   const [postId, setPostId] = useState<string>('');
   
@@ -98,6 +99,10 @@ export default function EditForumPostPage({ params }: EditForumPostPageProps) {
 
       await updatePostMutation.mutateAsync(postData);
 
+      // React Query 캐시 무효화
+      queryClient.invalidateQueries({ queryKey: ['getForumPostsApiForumGet'] });
+      queryClient.invalidateQueries({ queryKey: ['forum-post', postId] });
+
       if (isDraft) {
         alert('임시저장되었습니다.');
       } else {
@@ -157,7 +162,7 @@ export default function EditForumPostPage({ params }: EditForumPostPageProps) {
             게시글을 수정하려면 로그인해주세요.
           </p>
           <Link
-            href="/auth/login"
+            href="/login"
             className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
           >
             로그인하러 가기

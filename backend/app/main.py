@@ -1,20 +1,33 @@
-from fastapi import FastAPI, HTTPException, Depends, status
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from pydantic import BaseModel
-from typing import List, Optional
-from datetime import datetime, timedelta
-import os
 import json
+import os
+from datetime import datetime, timedelta
+from typing import List, Optional
 
-from .routers import docs, blog, forum, dashboard, auth, analytics, users, search, upload, webhook, dummy_oidc
+from fastapi import Depends, FastAPI, HTTPException, status
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
+from pydantic import BaseModel
+
+from .core.auth import get_current_user
 from .core.config import settings
 from .core.database import database
-from .core.auth import get_current_user
+from .routers import (
+    analytics,
+    auth,
+    blog,
+    dashboard,
+    docs,
+    dummy_oidc,
+    forum,
+    search,
+    upload,
+    users,
+    webhook,
+)
 
 app = FastAPI(
-    title="ND-SE API",
-    description="API for ND-SE Documentation System",
+    title="NDASH API",
+    description="API for NDASH Documentation System",
     version="1.0.0",
 )
 
@@ -43,11 +56,13 @@ app.include_router(webhook.router, prefix="/api/webhook", tags=["webhook"])
 if settings.ENVIRONMENT == "development":
     app.include_router(dummy_oidc.router, prefix="/dummy-oidc", tags=["dummy-oidc"])
 
+
 @app.on_event("startup")
 async def startup_event():
     """애플리케이션 시작 시 실행"""
     await database.connect()
     print("Connected to database")
+
 
 @app.on_event("shutdown")
 async def shutdown_event():
@@ -55,28 +70,20 @@ async def shutdown_event():
     await database.disconnect()
     print("Disconnected from database")
 
+
 @app.get("/")
 async def root():
     """루트 엔드포인트"""
-    return {
-        "message": "ND-SE API Server",
-        "version": "1.0.0",
-        "status": "running"
-    }
+    return {"message": "NDASH API Server", "version": "1.0.0", "status": "running"}
+
 
 @app.get("/health")
 async def health_check():
     """헬스 체크 엔드포인트"""
-    return {
-        "status": "healthy",
-        "timestamp": datetime.now().isoformat()
-    }
+    return {"status": "healthy", "timestamp": datetime.now().isoformat()}
+
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(
-        "main:app",
-        host="0.0.0.0",
-        port=8000,
-        reload=True
-    )
+
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)

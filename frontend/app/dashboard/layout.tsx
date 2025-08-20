@@ -17,7 +17,7 @@ export default function DashboardLayout({
   // 임시로 인증 체크를 비활성화 (데모용)
   // useEffect(() => {
   //   if (!isLoading && !user) {
-  //     router.push('/auth/login');
+  //     router.push('/login');
   //   }
   // }, [user, isLoading, router]);
 

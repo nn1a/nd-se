@@ -56,7 +56,7 @@ export default function ForumDraftsPage() {
             임시저장된 게시글을 보려면 로그인해주세요.
           </p>
           <Link
-            href="/auth/login"
+            href="/login"
             className="bg-yellow-600 text-white px-4 py-2 rounded-md hover:bg-yellow-700 transition-colors"
           >
             로그인하러 가기

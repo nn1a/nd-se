@@ -1,5 +1,7 @@
 from motor.motor_asyncio import AsyncIOMotorClient
+
 from .config import settings
+
 
 class Database:
     client: AsyncIOMotorClient = None
@@ -20,5 +22,6 @@ class Database:
     def get_collection(self, collection_name: str):
         """컬렉션 반환"""
         return self.database[collection_name]
+
 
 database = Database()

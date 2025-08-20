@@ -14,7 +14,7 @@ export function Navigation() {
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
           <Link href="/" className="text-xl font-bold text-gray-900 hover:text-blue-600 transition-colors">
-            ND-SE
+            NDASH
           </Link>
           
           {/* Desktop Navigation */}
@@ -56,7 +56,7 @@ export function Navigation() {
               ) : (
                 <>
                   <Link
-                    href="/auth/login"
+                    href="/login"
                     className="btn btn-ghost"
                   >
                     로그인
@@ -135,7 +135,7 @@ export function Navigation() {
                 ) : (
                   <>
                     <Link
-                      href="/auth/login"
+                      href="/login"
                       className="block text-gray-700 hover:text-gray-900"
                       onClick={() => setIsOpen(false)}
                     >

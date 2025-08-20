@@ -1,8 +1,8 @@
-# ND-SE 통합 문서 시스템 - AI Agent Guide
+# NDASH 통합 문서 시스템 - AI Agent Guide
 
 ## 🏗️ Architecture Overview
 
-ND-SE is a **modern full-stack documentation platform** combining Next.js 15 frontend with FastAPI backend. The system provides documentation, blog, forum, and dashboard features with **MongoDB** as the primary database.
+NDASH is a **modern full-stack documentation platform** combining Next.js 15 frontend with FastAPI backend. The system provides documentation, blog, forum, and dashboard features with **MongoDB** as the primary database.
 
 **Key Design Principles:**
 - **API-first architecture** with auto-generated TypeScript clients
@@ -32,7 +32,7 @@ ND-SE is a **modern full-stack documentation platform** combining Next.js 15 fro
 ```bash
 cd backend
 source venv/bin/activate                    # Always activate venv first
-PYTHONPATH=/home/meakd/nd-se/backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=/home/meakd/ndash/backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 ### API Client Generation

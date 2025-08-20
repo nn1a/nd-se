@@ -1,6 +1,6 @@
 # OIDC/SSO Configuration Guide
 
-This guide explains how to set up Single Sign-On (SSO) using OpenID Connect (OIDC) with your ND-SE application.
+This guide explains how to set up Single Sign-On (SSO) using OpenID Connect (OIDC) with your NDASH application.
 
 ## Overview
 

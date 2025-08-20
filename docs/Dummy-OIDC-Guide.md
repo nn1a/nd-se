@@ -32,7 +32,7 @@ OIDC_SCOPES=openid profile email
 
 ```bash
 cd backend
-PYTHONPATH=/home/meakd/nd-se/backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
+PYTHONPATH=/home/meakd/ndash/backend uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 ```
 
 프론트엔드 서버를 시작합니다:

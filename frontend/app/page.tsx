@@ -5,7 +5,7 @@ export default function HomePage() {
     <div className="container mx-auto px-4 py-8">
       <div className="text-center">
         <h1 className="text-4xl font-bold text-gray-900 mb-6">
-          ND-SE 통합 문서 시스템
+          NDASH 통합 문서 시스템
         </h1>
         <p className="text-xl text-gray-600 mb-8">
           문서, 블로그, 대시보드, 게시판을 통합한 시스템

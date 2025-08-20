@@ -418,3 +418,107 @@
     border: 1px solid #ddd !important;
   }
 }
+
+/* Tiptap Table Styles */
+.ProseMirror table {
+  border-collapse: collapse;
+  table-layout: fixed;
+  width: 100%;
+  margin: 0;
+  overflow: hidden;
+  border: 1px solid #ddd;
+}
+
+.ProseMirror table td,
+.ProseMirror table th {
+  min-width: 1em;
+  border: 1px solid #ddd;
+  padding: 8px;
+  vertical-align: top;
+  box-sizing: border-box;
+  position: relative;
+}
+
+.ProseMirror table th {
+  font-weight: bold;
+  text-align: left;
+  background-color: #f5f5f5;
+}
+
+.ProseMirror table .selectedCell:after {
+  z-index: 2;
+  position: absolute;
+  content: "";
+  left: 0; right: 0; top: 0; bottom: 0;
+  background: rgba(200, 200, 255, 0.4);
+  pointer-events: none;
+}
+
+.ProseMirror table .column-resize-handle {
+  position: absolute;
+  right: -2px;
+  top: 0;
+  bottom: -2px;
+  width: 4px;
+  background-color: #adf;
+  pointer-events: none;
+}
+
+.ProseMirror table p {
+  margin: 0;
+}
+
+/* General HTML Table Styles for rendered content */
+.prose table, 
+.mdx-content table,
+.content table,
+article table,
+div[class*="prose"] table {
+  border-collapse: collapse !important;
+  width: 100% !important;
+  margin: 1em 0 !important;
+  border: 1px solid #d1d5db !important;
+  border-radius: 0.5rem !important;
+  overflow: hidden !important;
+}
+
+.prose table th,
+.prose table td,
+.mdx-content table th,
+.mdx-content table td,
+.content table th,
+.content table td,
+article table th,
+article table td,
+div[class*="prose"] table th,
+div[class*="prose"] table td {
+  border: 1px solid #d1d5db !important;
+  padding: 0.5rem 1rem !important;
+  text-align: left !important;
+}
+
+.prose table th,
+.mdx-content table th,
+.content table th,
+article table th,
+div[class*="prose"] table th {
+  background-color: #f9fafb !important;
+  font-weight: 600 !important;
+  color: #374151 !important;
+}
+
+.prose table tr:nth-child(even),
+.mdx-content table tr:nth-child(even),
+.content table tr:nth-child(even),
+article table tr:nth-child(even),
+div[class*="prose"] table tr:nth-child(even) {
+  background-color: #f9fafb !important;
+}
+
+.prose table tr:hover,
+.mdx-content table tr:hover,
+.content table tr:hover,
+article table tr:hover,
+div[class*="prose"] table tr:hover {
+  background-color: #f3f4f6 !important;
+}

@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { useAuth } from '../../../hooks/useAuth';
-import { useOIDC } from '../../../hooks/useOIDC';
+import { useAuth } from '../../hooks/useAuth';
+import { useOIDC } from '../../hooks/useOIDC';
 
 export default function LoginPage() {
   const router = useRouter();

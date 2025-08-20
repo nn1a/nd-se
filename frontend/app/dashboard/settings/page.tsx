@@ -22,7 +22,7 @@ export default function SettingsPage() {
                 id="site-title"
                 type="text" 
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                defaultValue="ND-SE Documentation"
+                defaultValue="NDASH Documentation"
                 placeholder="사이트 제목을 입력하세요"
               />
             </div>

@@ -70,7 +70,43 @@ module.exports = {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            'table': {
+              'border-collapse': 'collapse',
+              'width': '100%',
+              'margin': '1em 0',
+              'border': '1px solid rgb(209 213 219)',
+              'border-radius': '0.5rem',
+              'overflow': 'hidden',
+            },
+            'table th': {
+              'background-color': 'rgb(249 250 251)',
+              'font-weight': '600',
+              'color': 'rgb(55 65 81)',
+              'border': '1px solid rgb(209 213 219)',
+              'padding': '0.5rem 1rem',
+              'text-align': 'left',
+            },
+            'table td': {
+              'border': '1px solid rgb(209 213 219)',
+              'padding': '0.5rem 1rem',
+              'text-align': 'left',
+            },
+            'table tr:nth-child(even)': {
+              'background-color': 'rgb(249 250 251)',
+            },
+            'table tr:hover': {
+              'background-color': 'rgb(243 244 246)',
+            },
+          },
+        },
+      },
     },
   },
-  plugins: [require("@tailwindcss/typography"), require("tailwindcss-animate")],
+  plugins: [
+    require("@tailwindcss/typography"), 
+    require("tailwindcss-animate")
+  ],
 }

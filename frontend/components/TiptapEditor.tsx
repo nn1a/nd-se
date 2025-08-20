@@ -6,7 +6,11 @@ import { useEditor, EditorContent } from '@tiptap/react'
 import StarterKit from '@tiptap/starter-kit'
 import Link from '@tiptap/extension-link'
 import Image from '@tiptap/extension-image'
-// Table extensions temporarily removed due to import issues
+import TextAlign from '@tiptap/extension-text-align'
+import { Table } from '@tiptap/extension-table'
+import { TableRow } from '@tiptap/extension-table-row'
+import { TableHeader } from '@tiptap/extension-table-header'
+import { TableCell } from '@tiptap/extension-table-cell'
 import CodeBlockLowlight from '@tiptap/extension-code-block-lowlight'
 import Placeholder from '@tiptap/extension-placeholder'
 import { common, createLowlight } from 'lowlight'
@@ -20,7 +24,7 @@ import {
   Code,
   Link as LinkIcon,
   Image as ImageIcon,
-  // Table as TableIcon, // 임시 제거
+  Table as TableIcon,
   Undo,
   Redo,
   Save,
@@ -83,7 +87,15 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           class: 'max-w-full h-auto rounded-lg',
         },
       }),
-      // Table extensions temporarily removed
+      TextAlign.configure({
+        types: ['heading', 'paragraph'],
+      }),
+      Table.configure({
+        resizable: true,
+      }),
+      TableRow,
+      TableHeader,
+      TableCell,
       CodeBlockLowlight.configure({
         lowlight,
         HTMLAttributes: {
@@ -99,7 +111,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     },
     editorProps: {
       attributes: {
-        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl mx-auto focus:outline-none min-h-[200px] p-4',
+        class: 'prose prose-sm sm:prose lg:prose-lg xl:prose-xl mx-auto focus:outline-none min-h-[200px] p-4 prose-table:table-auto prose-td:border prose-td:border-gray-300 prose-td:p-2 prose-th:border prose-th:border-gray-300 prose-th:p-2 prose-th:bg-gray-100',
         style: `min-height: ${typeof height === 'number' ? `${height - 100}px` : 'calc(100% - 100px)'}`
       },
     },
@@ -149,7 +161,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
     editor?.chain().focus().toggleHeading({ level }).run()
   }
 
-  // 정렬 설정
+  // 텍스트 정렬
   const setTextAlign = (alignment: 'left' | 'center' | 'right' | 'justify') => {
     editor?.chain().focus().setTextAlign(alignment).run()
   }
@@ -304,7 +316,7 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
 
         <div className="h-6 w-px bg-gray-300 mx-1" />
 
-        {/* 정렬 */}
+        {/* 텍스트 정렬 */}
         <ToolbarButton
           onClick={() => setTextAlign('left')}
           icon={<AlignLeft size={16} />}
@@ -350,6 +362,15 @@ const TiptapEditor: React.FC<TiptapEditorProps> = ({
           icon={<Code size={16} />}
           title="코드 블록"
           active={editor.isActive('codeBlock')}
+        />
+
+        <div className="h-6 w-px bg-gray-300 mx-1" />
+
+        {/* 테이블 */}
+        <ToolbarButton
+          onClick={() => editor.chain().focus().insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()}
+          icon={<TableIcon size={16} />}
+          title="테이블 삽입"
         />
 
         <div className="h-6 w-px bg-gray-300 mx-1" />

@@ -1,9 +1,9 @@
 ---
 title: "Getting Started"
-description: "Introduction to ND-SE Documentation System"
+description: "Introduction to NDASH Documentation System"
 ---
 
-# Welcome to ND-SE Documentation System
+# Welcome to NDASH Documentation System
 
 This documentation system is a modern integrated platform built with Next.js and FastAPI.
 

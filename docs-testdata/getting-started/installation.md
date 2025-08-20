@@ -30,8 +30,8 @@ Make sure you have the following installed before proceeding:
 ### Step 1: Clone the Repository
 
 ```bash
-git clone https://github.com/your-org/nd-se.git
-cd nd-se
+git clone https://github.com/your-org/ndash.git
+cd ndash
 ```
 
 ### Step 2: Install Dependencies
@@ -161,7 +161,7 @@ chmod +x start-dev.sh
 If you encounter issues:
 
 1. Check the [Troubleshooting Guide](troubleshooting)
-2. Search existing [GitHub Issues](https://github.com/your-org/nd-se/issues)
+2. Search existing [GitHub Issues](https://github.com/your-org/ndash/issues)
 3. Ask for help on [Discord](https://discord.gg/example)
 
 ## Next Steps
